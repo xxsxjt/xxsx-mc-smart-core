@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="xxsx_builder"
+version="${file.jarVersion}"
+displayName="xxsx的智能核心"
+description='''
+xxsx's MC Smart Core — Minecraft AI 助手模组。自然语言操控游戏，AI 自主决策执行指令，PMX 模型体素建筑，知识库系统。
+'''
+authors="xxsx"
+
+[[dependencies.xxsx_builder]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.xxsx_builder]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="BOTH"

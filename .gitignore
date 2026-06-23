@@ -1,0 +1,46 @@
+# Gradle
+build/
+.gradle/
+run/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+*.iml
+.idea/
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+*.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+out.txt
+
+# Build scripts (personal, not part of the mod)
+build.bat
+build.ps1
+build_and_deploy.bat
+
+# Dev helpers (personal)
+deploy.py
+run_build.py
+run_test.bat
+restart_edge.py
+start_edge_debug.bat
+create_github_repo.py
+test_pmx.py
+
+# External data
+安魂曲/
+temp/
+local/
+
+# IDE-opened guide
+浏览器操作指南.md
