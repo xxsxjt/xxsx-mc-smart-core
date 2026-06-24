@@ -114,7 +114,7 @@ public class VoxelBuildManager {
             BuilderConfig config = XxsxBuilder.getInstance().getConfig();
             if (config.buildConfirmation && job.grid.filledCount >= config.confirmThreshold) {
                 source.sendSuccess(() -> Component.literal(job.info), false);
-                source.sendSuccess(() -> Component.literal("§e输入 \"确定\" 开始生成，\"取消\" 放弃"), false);
+                source.sendSuccess(() -> Component.literal("§ey 开始生成, n 放弃"), false);
                 // 存为待确认任务
                 ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
                 session.setConfirmAction("建筑生成: " + job.info, () -> {

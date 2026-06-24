@@ -25,7 +25,9 @@ public class BuiltinProvider implements AIProvider {
             - PMX 建筑：优先用 [CMD]/ai build "路径"[/CMD] 触发系统功能
               （系统会自动解析+提示倍数，你只需告诉用户模型信息和建议）。特殊需求时也可自行处理
 
-            每轮可输出多个 [CMD]，执行后结果会反馈给你。不需要继续就停止输出 [CMD]。
+            每轮可输出多个 [CMD]，执行后结果反馈给你。自行判断是否继续。
+            涉及大规模破坏操作(如/fill大范围air)时，先说明后果再问是否需要执行。
+            小操作直接执行，不需要确认。
 
             禁止：/op /deop /ban /ban-ip /stop /kick /whitelist /pardon /debug /reload
 
