@@ -71,6 +71,26 @@ blocks_per_tick = 200
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
+## 当前状态 (2026-06-23)
+
+v1.0.0 — 功能完整，可用于游戏内测试。
+
+已实现：
+- `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
+- `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）
+- `[KNOWLEDGE]` 知识库（jar 内置 ftbquests/bloodmagic，外置可扩展）
+- `[CMD]` 指令自动执行，错误反馈给 AI
+- PMX 体素建筑（法线着色 + CIELAB 80色匹配 + 异步分步放置）
+- 模型切换 `/ai api` + `/ai model`（Agnes 内置 + Custom）
+- 个人 API `/ai addmodel <url> <key> <model> [上下文长度]`
+- 会话持久化（同玩家重连恢复）+ 上下文自动压缩
+- 聊天折叠显示（悬停全文/点击复制）
+- 独立日志 `logs/xxsx_builder.log`
+
+待优化：
+- PMX 纹理采样着色（目前仅材质色+法线明暗）
+- AI 可触发的配置修改接口完善
+
 ## 作者
 
 xxsx
