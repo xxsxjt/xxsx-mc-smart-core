@@ -155,17 +155,12 @@ public class AICommand {
             if (!c) source.sendFailure(Component.literal("§c没有正在执行的任务"));
             return 1;
         }
-        // y/n 快捷确认
+        // y/n — 仅用于清除区域确认
         if (input.equalsIgnoreCase("y") || input.equals("yes")) {
-            ChatSession s = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
-            if (s.isAwaitingConfirm()) { s.confirm(); source.sendSuccess(() -> Component.literal("§aok"), false); return 1; }
-            // 检查是否有待处理的 build clear
             VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
             if (vm != null && vm.confirmClear(playerName)) { return 1; }
         }
         if (input.equalsIgnoreCase("n") || input.equals("no")) {
-            ChatSession s = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
-            if (s.isAwaitingConfirm()) { s.cancel(); source.sendSuccess(() -> Component.literal("§ccancelled"), false); return 1; }
             VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
             if (vm != null && vm.cancelClear(playerName)) { return 1; }
         }

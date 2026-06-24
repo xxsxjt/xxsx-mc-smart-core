@@ -110,21 +110,10 @@ public class VoxelBuildManager {
         });
 
         future.thenAcceptAsync(job -> {
-            // 检查是否需要确认
-            BuilderConfig config = XxsxBuilder.getInstance().getConfig();
-            if (config.buildConfirmation && job.grid.filledCount >= config.confirmThreshold) {
-                source.sendSuccess(() -> Component.literal(job.info), false);
-                source.sendSuccess(() -> Component.literal("§ey 开始生成, n 放弃"), false);
-                // 存为待确认任务
-                ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
-                session.setConfirmAction("建筑生成: " + job.info, () -> {
-                    jobs.put(playerName, job);
-                    source.sendSuccess(() -> Component.literal("§a开始生成！"), false);
-                });
-            } else {
-                jobs.put(playerName, job);
-                source.sendSuccess(() -> Component.literal("§a开始生成！"), false);
-            }
+            jobs.put(playerName, job);
+            source.sendSuccess(() -> Component.literal(
+                "§a开始生成! " + job.grid.width + "x" + job.grid.height + "x" + job.grid.depth
+                + " (约" + job.grid.filledCount + "方块, 首帧将提示清除区域)"), false);
         }, server);
 
         future.exceptionally(e -> {
