@@ -129,12 +129,12 @@ public class SessionManager {
     public CompletableFuture<String> handleInput(String playerName, String input) {
         ChatSession session = getSession(playerName);
         if (session.isAwaitingConfirm()) {
-            if (input.equals("确定") || input.equals("确认") || input.equals("yes") || input.equals("y")) {
+            if (input.equalsIgnoreCase("y") || input.equals("yes")) {
                 session.confirm();
-                return CompletableFuture.completedFuture("§a已确认");
-            } else if (input.equals("取消") || input.equals("no") || input.equals("n") || input.equals("cancel")) {
+                return CompletableFuture.completedFuture("§aok");
+            } else if (input.equalsIgnoreCase("n") || input.equals("no")) {
                 session.cancel();
-                return CompletableFuture.completedFuture("§c已取消");
+                return CompletableFuture.completedFuture("§ccancelled");
             }
         }
         session.addMessage("user", input);

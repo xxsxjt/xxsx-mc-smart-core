@@ -115,51 +115,11 @@ public class AICommand {
                                                         Component.literal("§a已添加: " + model), false);
                                                     return 1;
                                                 })))))
-                // build 子命令 — 直接解析 PMX，不经过 AI
                 .then(Commands.literal("build")
                         .then(Commands.argument("path", StringArgumentType.greedyString())
-                                .executes(ctx -> {
-                                    String args = StringArgumentType.getString(ctx, "path").trim();
-                                    CommandSourceStack src = ctx.getSource();
-                                    String n = src.getTextName();
-                                    if (args.startsWith("\"") && args.indexOf("\"", 1) > 0) {
-                                        int q = args.indexOf("\"", 1);
-                                        args = args.substring(1, q) + " " + args.substring(q + 1).trim();
-                                    }
-                                    String[] parts = args.split("\\s+", 2);
-                                    String path = parts[0];
-                                    if (path.isEmpty()) {
-                                        src.sendFailure(Component.literal("§c请指定 PMX 文件路径"));
-                                        return 1;
-                                    }
-                                    int scale = XxsxBuilder.getInstance().getConfig().defaultScale;
-                                    try { if (parts.length > 1) scale = Integer.parseInt(parts[1]); }
-                                    catch (NumberFormatException e) {
-                                        src.sendFailure(Component.literal("§c大小必须是数字"));
-                                        return 1;
-                                    }
-                                    final int s = scale;
-
-                                    // 快速预解析获取模型信息
-                                    try {
-                                        java.nio.file.Path pmxPath = java.nio.file.Paths.get(path);
-                                        if (!java.nio.file.Files.exists(pmxPath)) {
-                                            src.sendFailure(Component.literal("§c文件不存在: " + path));
-                                            return 1;
-                                        }
-                                        long fsize = java.nio.file.Files.size(pmxPath);
-                                        src.sendSuccess(() -> Component.literal(
-                                            "§ePMX: " + pmxPath.getFileName()
-                                            + " §7(" + (fsize/1024) + "KB, 比例 " + s + ")"), false);
-                                    } catch (java.io.IOException ex) {
-                                        src.sendFailure(Component.literal("§c文件错误: " + ex.getMessage()));
-                                        return 1;
-                                    }
-
-                                    VoxelBuildManager m = XxsxBuilder.getInstance().getBuildManager();
-                                    if (m != null) m.startBuild(n, path, s, src);
-                                    return 1;
-                                })))
+                                .executes(ctx -> handleBuildCommand(
+                                    StringArgumentType.getString(ctx, "path").trim(),
+                                    ctx.getSource(), ctx.getSource().getTextName()))))
                 // 帮助
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
@@ -195,6 +155,37 @@ public class AICommand {
             if (!c) source.sendFailure(Component.literal("§c没有正在执行的任务"));
             return 1;
         }
+        // y/n 快捷确认
+        if (input.equalsIgnoreCase("y") || input.equals("yes")) {
+            ChatSession s = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
+            if (s.isAwaitingConfirm()) { s.confirm(); source.sendSuccess(() -> Component.literal("§aok"), false); return 1; }
+            // 检查是否有待处理的 build clear
+            VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
+            if (vm != null && vm.confirmClear(playerName)) { return 1; }
+        }
+        if (input.equalsIgnoreCase("n") || input.equals("no")) {
+            ChatSession s = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
+            if (s.isAwaitingConfirm()) { s.cancel(); source.sendSuccess(() -> Component.literal("§ccancelled"), false); return 1; }
+            VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
+            if (vm != null && vm.cancelClear(playerName)) { return 1; }
+        }
+
+        // 数字输入 → build 倍数确认
+        try {
+            int multiplier = Integer.parseInt(input);
+            ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
+            if (session.pendingBuildPath != null) {
+                String path = session.pendingBuildPath;
+                int actualScale = session.pendingBuildBaseScale * multiplier;
+                session.pendingBuildPath = null;
+                source.sendSuccess(() -> Component.literal(
+                    "§e倍数 " + multiplier + "x → 实际比例 " + actualScale), false);
+                VoxelBuildManager m = XxsxBuilder.getInstance().getBuildManager();
+                if (m != null) m.startBuild(playerName, path, actualScale, source);
+                return 1;
+            }
+        } catch (NumberFormatException ignored) {}
+
         // clear
         if (input.startsWith("clear")) {
             XxsxBuilder.getInstance().getSessionManager().getSession(playerName).clearHistory();
@@ -202,16 +193,60 @@ public class AICommand {
             return 1;
         }
 
-        // 普通对话 — AI 主导，不强制接管任何输入
-        source.sendSuccess(() -> Component.literal("§7[你] " + input), false);
-        ModLogger.info("[" + playerName + "] " + input);
-
         SessionManager sm = XxsxBuilder.getInstance().getSessionManager();
         CommandExecutor exec = XxsxBuilder.getInstance().getCommandExecutor();
         if (sm == null || exec == null) {
             source.sendFailure(Component.literal("§cAI 系统未就绪"));
             return 1;
         }
+
+        // PMX 路径检测 — 提取并注入 AI 上下文（不绕过 AI）
+        String pmxPath = extractPmxPath(input);
+        if (pmxPath != null) {
+            pmxPath = pmxPath.replace("\"", "").trim();  // 去引号
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(pmxPath);
+                if (java.nio.file.Files.exists(p)) {
+                    com.xxsx.builder.voxel.PMXModel model;
+                    if (pmxPath.toLowerCase().endsWith(".obj")) {
+                        com.xxsx.builder.voxel.OBJModel o = new com.xxsx.builder.voxel.OBJParser().parse(p);
+                        model = new com.xxsx.builder.voxel.PMXModel();
+                        model.vertices.addAll(o.vertices); model.normals.addAll(o.normals);
+                        model.uvs.addAll(o.uvs); model.faces.addAll(o.faces);
+                        model.faceMaterials.addAll(o.faceMaterials); model.materials.addAll(o.materials);
+                    } else
+                        model = new com.xxsx.builder.voxel.PMXParser().parse(p);
+                    float minX=999,minY=999,minZ=999,maxX=-999,maxY=-999,maxZ=-999;
+                    for (var v : model.vertices) {
+                        if(v.x<minX)minX=v.x; if(v.y<minY)minY=v.y; if(v.z<minZ)minZ=v.z;
+                        if(v.x>maxX)maxX=v.x; if(v.y>maxY)maxY=v.y; if(v.z>maxZ)maxZ=v.z;
+                    }
+                    float sx=maxX-minX, sy=maxY-minY, sz=maxZ-minZ;
+                    float maxDim = Math.max(sx, Math.max(sy, sz));
+                    int suggested = (int)(50000.0 / Math.sqrt(model.vertices.size()));
+                    suggested = Math.max(30, Math.min(400, suggested));
+                    int gridW = Math.max(1, Math.round(sx * suggested / maxDim));
+                    int gridH = Math.max(1, Math.round(sy * suggested / maxDim));
+                    int gridD = Math.max(1, Math.round(sz * suggested / maxDim));
+                    long estBlocks = ((long)gridW * gridH * gridD) / 10;
+                    sm.addSystemMessage(playerName,
+                        "【PMX模型信息】文件: " + p.getFileName()
+                        + " | 顶点: " + model.vertices.size() + " | 面: " + model.faces.size()
+                        + " | 材质: " + model.materials.size() + "\n"
+                        + "尺寸: " + String.format("%.1f", sx) + "x" + String.format("%.1f", sy) + "x" + String.format("%.1f", sz)
+                        + " | 建议比例: " + suggested + " (30-400)\n"
+                        + "占地: " + gridW + "x" + gridH + "x" + gridD + " 方块"
+                        + " | 约" + estBlocks + "方块\n"
+                        + "→ 询问用户倍数后，用 /ai build 路径 触发建筑（优先系统功能）。");
+                }
+            } catch (Exception e) {
+                source.sendSuccess(() -> Component.literal("§cPMX 预读失败: " + e.getMessage()), false);
+            }
+        }
+
+        // 普通对话 — AI 主导，路径信息已注入上下文
+        source.sendSuccess(() -> Component.literal("§7[你] " + input), false);
+        ModLogger.info("[" + playerName + "] " + input);
 
         String anchorPos = CommandExecutor.getPlayerPos(source);
         ChatSession session = sm.getSession(playerName);
@@ -271,4 +306,74 @@ public class AICommand {
         });
     }
 
+    /** /ai build 两步交互：先展示1倍坐标，再等用户输入倍数 */
+    private static int handleBuildCommand(String args, CommandSourceStack src, String playerName) {
+        // 去引号
+        String path = args.trim();
+        if (path.startsWith("\"") && path.indexOf("\"", 1) > 0) {
+            path = path.substring(1, path.indexOf("\"", 1));
+        }
+        if (path.isEmpty()) { src.sendFailure(Component.literal("§c请指定 PMX 路径")); return 1; }
+
+        try {
+            java.nio.file.Path p = java.nio.file.Paths.get(path);
+            if (!java.nio.file.Files.exists(p)) {
+                src.sendFailure(Component.literal("§c文件不存在: " + path)); return 1;
+            }
+
+            com.xxsx.builder.voxel.PMXModel model;
+            if (path.toLowerCase().endsWith(".obj")) {
+                var o = new com.xxsx.builder.voxel.OBJParser().parse(p);
+                model = new com.xxsx.builder.voxel.PMXModel();
+                model.vertices.addAll(o.vertices); model.normals.addAll(o.normals);
+                model.uvs.addAll(o.uvs); model.faces.addAll(o.faces);
+                model.faceMaterials.addAll(o.faceMaterials); model.materials.addAll(o.materials);
+            } else {
+                model = new com.xxsx.builder.voxel.PMXParser().parse(p);
+            }
+            float minX=999,minY=999,minZ=999,maxX=-999,maxY=-999,maxZ=-999;
+            for (var v : model.vertices) {
+                if(v.x<minX)minX=v.x; if(v.y<minY)minY=v.y; if(v.z<minZ)minZ=v.z;
+                if(v.x>maxX)maxX=v.x; if(v.y>maxY)maxY=v.y; if(v.z>maxZ)maxZ=v.z;
+            }
+            float sx=maxX-minX, sy=maxY-minY, sz=maxZ-minZ;
+
+            int suggested = (int)(50000.0 / Math.sqrt(model.vertices.size()));
+            suggested = Math.max(30, Math.min(400, suggested));
+            // 1倍 = suggested 比例下的方块尺寸
+            float maxDim = Math.max(sx, Math.max(sy, sz));
+            int w1 = Math.max(1, Math.round(sx * suggested / maxDim));
+            int h1 = Math.max(1, Math.round(sy * suggested / maxDim));
+            int d1 = Math.max(1, Math.round(sz * suggested / maxDim));
+
+            src.sendSuccess(() -> Component.literal(
+                "§e" + p.getFileName() + " | 顶点" + model.vertices.size()
+                + " 面" + model.faces.size() + " 材质" + model.materials.size()), false);
+            src.sendSuccess(() -> Component.literal(
+                "§71x大小: " + w1 + "x" + h1 + "x" + d1 + " 方块"
+                + " | 建议倍数1-10 (如3=" + (w1*3) + "x" + (h1*3) + "x" + (d1*3) + ")"), false);
+            src.sendSuccess(() -> Component.literal(
+                "§6输入数字确认倍数:"), false);
+
+            // 存待确认状态
+            ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
+            session.pendingBuildPath = path;
+            session.pendingBuildBaseScale = suggested;
+
+        } catch (Exception e) {
+            src.sendFailure(Component.literal("§cPMX解析失败: " + e.getMessage()));
+        }
+        return 1;
+    }
+
+    private static String extractPmxPath(String input) {
+        if (input == null || input.isEmpty()) return null;
+        var q = java.util.regex.Pattern.compile(
+            "\"([^\"]{5,}\\.(pmx|obj))\"", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(input);
+        if (q.find()) return q.group(1).trim();
+        var b = java.util.regex.Pattern.compile(
+            "([A-Za-z]:[\\\\/][^\\s]{5,}\\.(pmx|obj))", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(input);
+        if (b.find()) return b.group(1).trim();
+        return null;
+    }
 }

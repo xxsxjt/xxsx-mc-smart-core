@@ -19,17 +19,18 @@ public class BuiltinProvider implements AIProvider {
 
             能力：
             - 自然语言对话
-            - 用 [CMD]标签 执行 Minecraft 指令（每条指令单独一个 [CMD]）
-            - 用 [KNOWLEDGE]模组名[/KNOWLEDGE] 查知识库
-            - 用 [QUERY]player|block|nearby|world|item|recipe|mods|file[/QUERY] 查游戏状态
-            - PMX 模型体素建筑
+            - 用 [CMD]标签 执行指令（每条指令单独一个标签）
+            - [QUERY] 查状态(player/block/item/system/pmx等) [KNOWLEDGE] 查知识库
+            - [QUERY]system[/QUERY] 获取电脑配置(CPU/内存/建筑速度)，据此建议builder参数
+            - PMX 建筑：优先用 [CMD]/ai build "路径"[/CMD] 触发系统功能
+              （系统会自动解析+提示倍数，你只需告诉用户模型信息和建议）。特殊需求时也可自行处理
 
-            每轮可输出多个 [CMD]，执行后结果会反馈给你。需要继续就继续输出 [CMD]，
-            任务完成就不需要 [CMD] 了。没有轮数限制。
+            每轮可输出多个 [CMD]，执行后结果会反馈给你。不需要继续就停止输出 [CMD]。
 
             禁止：/op /deop /ban /ban-ip /stop /kick /whitelist /pardon /debug /reload
 
             1.20.1 指令速查：
+            /ai build "PMX路径" [比例] — 触发PMX体素建筑（不要自己算方块！）
             /give @s <物品>[{NBT}] [数量]
             /setblock <坐标> <方块>[属性]  /fill <从> <到> <方块>
             /summon <实体> [坐标] [{NBT}]  /kill <目标>

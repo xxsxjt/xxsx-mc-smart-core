@@ -40,8 +40,10 @@ public class BuilderConfig {
             inner.comment("大型建筑需要玩家确认").define("build.require_confirmation", true);
     public static final ForgeConfigSpec.IntValue CONFIRM_THRESHOLD =
             inner.comment("触发确认的最小方块数").defineInRange("build.confirm_threshold", 100, 10, 10000);
+    public static final ForgeConfigSpec.BooleanValue BUILD_ASK_CLEAR =
+            inner.comment("建筑前询问是否清除周围区域").define("build.ask_clear", true);
     public static final ForgeConfigSpec.IntValue BLOCKS_PER_TICK =
-            inner.comment("每 tick 放置方块数").defineInRange("build.blocks_per_tick", 200, 10, 2000);
+            inner.comment("每 tick 放置方块数（20 tick=1秒，默认50=1000方块/秒）").defineInRange("build.blocks_per_tick", 50, 5, 1000);
     public static final ForgeConfigSpec.IntValue MAX_VERTICES =
             inner.comment("PMX 最大顶点数").defineInRange("build.max_vertices", 500000, 10000, 5000000);
     public static final ForgeConfigSpec.IntValue DEFAULT_SCALE =
@@ -70,7 +72,8 @@ public class BuilderConfig {
     public String knowledgePath = "config/xxsx_builder/knowledge";
     public boolean buildConfirmation = true;
     public int confirmThreshold = 100;
-    public int blocksPerTick = 200;
+    public boolean buildAskClear = true;  // 建造前询问是否清除区域
+    public int blocksPerTick = 50;
     public int maxVertices = 500000;
     public int defaultScale = 300;
     public String commandBlacklist = "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on";
@@ -96,6 +99,7 @@ public class BuilderConfig {
         c.apiTimeoutMs = API_TIMEOUT_MS.get();
         c.knowledgePath = KNOWLEDGE_PATH.get();
         c.buildConfirmation = BUILD_CONFIRMATION.get();
+        c.buildAskClear = BUILD_ASK_CLEAR.get();
         c.confirmThreshold = CONFIRM_THRESHOLD.get();
         c.blocksPerTick = BLOCKS_PER_TICK.get();
         c.maxVertices = MAX_VERTICES.get();
@@ -118,6 +122,7 @@ public class BuilderConfig {
         this.apiTimeoutMs = other.apiTimeoutMs;
         this.knowledgePath = other.knowledgePath;
         this.buildConfirmation = other.buildConfirmation;
+        this.buildAskClear = other.buildAskClear;
         this.confirmThreshold = other.confirmThreshold;
         this.blocksPerTick = other.blocksPerTick;
         this.maxVertices = other.maxVertices;

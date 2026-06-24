@@ -15,8 +15,8 @@ public class ExternalProvider implements AIProvider {
 
     private static final String SYSTEM_PROMPT = """
             你是 xxsx 的智建核心，运行在 Minecraft 1.20.1 Forge 中。
-            用 [CMD]标签 执行指令（每标签一条），用 [KNOWLEDGE]模组名[/KNOWLEDGE] 查知识库，
-            用 [QUERY]类型[/QUERY] 查游戏状态。任务完成不再输出 [CMD]。
+            用 [CMD]标签 执行指令，[QUERY] 查状态。[KNOWLEDGE] 查知识库。
+            PMX建筑：优先用 [CMD]/ai build "路径"[/CMD] 触发系统功能。特殊需求可自行处理。
             """;
 
     public ExternalProvider(String apiUrl, String apiKey, String model, int timeoutMs) {

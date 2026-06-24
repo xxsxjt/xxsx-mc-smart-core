@@ -142,6 +142,12 @@ public class CommandExecutor {
                 case "recipe" -> {
                     return queryRecipes(arg);
                 }
+                case "gamerule" -> {
+                    return queryGamerule(source, arg);
+                }
+                case "system" -> {
+                    return querySystem();
+                }
                 case "help" -> {
                     return "可用查询: player, item <id>, block x y z, nearby <半径>, world, file <路径>, dir <目录>, mods, recipe <物品id>";
                 }
@@ -214,6 +220,23 @@ public class CommandExecutor {
             p.experienceLevel,
             p.getMainHandItem().isEmpty() ? "空" : p.getMainHandItem().getDisplayName().getString(),
             p.gameMode.getGameModeForPlayer().getName());
+    }
+
+    private String queryGamerule(CommandSourceStack source, String rule) {
+        return "用 [CMD]/gamerule " + (rule.isEmpty() ? "" : rule) + "[/CMD] 查看/设置。常用: keepInventory doDaylightCycle doWeatherCycle doMobSpawning mobGriefing doFireTick randomTickSpeed";
+    }
+
+    private String querySystem() {
+        Runtime rt = Runtime.getRuntime();
+        long maxMem = rt.maxMemory() / (1024*1024);
+        long totalMem = rt.totalMemory() / (1024*1024);
+        long freeMem = rt.freeMemory() / (1024*1024);
+        int cores = rt.availableProcessors();
+        String os = System.getProperty("os.name");
+        int bpt = XxsxBuilder.getInstance().getConfig().blocksPerTick;
+        int bps = bpt * 20;
+        return String.format("CPU: %d核 | OS: %s | 内存: %dMB/%dMB(空闲%dMB) | 建筑速度: %d方块/秒(%d/tick)",
+            cores, os, totalMem, maxMem, freeMem, bps, bpt);
     }
 
     private String queryWorld(CommandSourceStack source) {

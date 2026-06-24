@@ -6,7 +6,11 @@ import com.xxsx.builder.command.AICommand;
 import com.xxsx.builder.ai.CommandExecutor;
 import com.xxsx.builder.config.BuilderConfig;
 import com.xxsx.builder.voxel.VoxelBuildManager;
+import com.xxsx.builder.config.ModConfigScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -19,11 +23,13 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Mod(XxsxBuilder.MODID)
 public class XxsxBuilder {
     public static final String MODID = "xxsx_builder";
     public static final Logger LOGGER = LogUtils.getLogger();
+    private static final AtomicBoolean SHOWN_CONFIG = new AtomicBoolean(false);
 
     private static XxsxBuilder instance;
     private BuilderConfig config;
@@ -40,10 +46,18 @@ public class XxsxBuilder {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, BuilderConfig.SPEC, MODID + "-common.toml");
 
         MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.addListener(this::onMainMenu);
     }
 
     private void setup(final FMLCommonSetupEvent event) {
         LOGGER.info("[xxsx_builder] 加载中...");
+    }
+
+    // 主界面弹窗（仅客户端）
+    public void onMainMenu(ScreenEvent.Opening event) {
+        if (event.getScreen() instanceof TitleScreen && !SHOWN_CONFIG.getAndSet(true)) {
+            event.setNewScreen(new ModConfigScreen());
+        }
     }
 
     @SubscribeEvent
@@ -68,7 +82,7 @@ public class XxsxBuilder {
 
         boolean usingBuiltin = config.providerUrl.isEmpty();
         player.sendSystemMessage(Component.literal(
-            "§b[xxsx的智能核心] §fv1.0.0 已装载"));
+            "§b[xxsx的智能核心] §fv1.0.1 已装载"));
         player.sendSystemMessage(Component.literal(
             usingBuiltin
                 ? "§e当前使用开发者内置 API，多人共用可能卡顿。建议添加自己的模型:"

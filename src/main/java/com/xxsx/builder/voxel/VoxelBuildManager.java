@@ -48,19 +48,27 @@ public class VoxelBuildManager {
             source.sendFailure(Component.literal("§c文件不存在: " + filePath));
             return;
         }
-        if (!filePath.toLowerCase().endsWith(".pmx")) {
-            source.sendFailure(Component.literal("§c仅支持 .pmx 格式"));
+        String ext = filePath.toLowerCase();
+        if (!ext.endsWith(".pmx") && !ext.endsWith(".obj")) {
+            source.sendFailure(Component.literal("§c仅支持 .pmx 和 .obj 格式"));
             return;
         }
 
-        source.sendSuccess(() -> Component.literal("§e正在解析 PMX 模型..."), false);
+        source.sendSuccess(() -> Component.literal("§e正在解析模型..."), false);
 
-        // 异步解析和体素化（在 ForkJoinPool 中执行）
+        // 异步解析和体素化
         CompletableFuture<BuildJob> future = CompletableFuture.supplyAsync(() -> {
             try {
                 long t0 = System.currentTimeMillis();
-                PMXParser parser = new PMXParser();
-                PMXModel model = parser.parse(path);
+                PMXModel model;
+                if (ext.endsWith(".obj")) {
+                    OBJParser objParser = new OBJParser();
+                    OBJModel objModel = objParser.parse(path);
+                    model = convertOBJ(objModel);
+                } else {
+                    PMXParser parser = new PMXParser();
+                    model = parser.parse(path);
+                }
 
                 BuilderConfig config = XxsxBuilder.getInstance().getConfig();
                 if (model.getVertexCount() > config.maxVertices) {
@@ -125,6 +133,28 @@ public class VoxelBuildManager {
         });
     }
 
+    /** y确认清除 */
+    public boolean confirmClear(String playerName) {
+        BuildJob job = jobs.get(playerName);
+        if (job != null && job.clearPending) {
+            job.clearPending = false;
+            return true;
+        }
+        return false;
+    }
+
+    /** n拒绝清除 */
+    public boolean cancelClear(String playerName) {
+        BuildJob job = jobs.get(playerName);
+        if (job != null && job.clearPending) {
+            job.clearPending = false;
+            job.areaCleared = true; // 跳过清除，直接开始建造
+            job.source.sendSuccess(() -> Component.literal("§7跳过清除，直接建造"), false);
+            return true;
+        }
+        return false;
+    }
+
     /** 取消玩家的建筑任务 */
     public boolean cancelBuild(String playerName) {
         BuildJob job = jobs.remove(playerName);
@@ -156,6 +186,23 @@ public class VoxelBuildManager {
                         (int) job.source.getPosition().z);
 
                 Voxelizer.VoxelGrid grid = job.grid;
+
+                // 询问是否清除建筑区域
+                if (config.buildAskClear && !job.areaCleared) {
+                    job.areaCleared = true;
+                    final int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
+                    final int count = (hw*2+1) * (hh*2+1) * (hd*2+1);
+                    job.source.sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                        "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)为空气? (y/n)"), false);
+                    job.clearPending = true;
+                    return;
+                }
+
+                // 处理清除确认
+                if (job.clearPending) {
+                    job.clearArea(level, center, grid);
+                    job.clearPending = false;
+                }
 
                 int placed = 0;
                 while (placed < perTick && job.nextIndex < totalVoxels(grid)) {
@@ -221,6 +268,18 @@ public class VoxelBuildManager {
         return grid.width * grid.height * grid.depth;
     }
 
+    /** OBJModel → PMXModel 转换 */
+    private static PMXModel convertOBJ(OBJModel o) {
+        PMXModel m = new PMXModel();
+        m.vertices.addAll(o.vertices);
+        m.normals.addAll(o.normals);
+        m.uvs.addAll(o.uvs);
+        m.faces.addAll(o.faces);
+        m.faceMaterials.addAll(o.faceMaterials);
+        m.materials.addAll(o.materials);
+        return m;
+    }
+
     private Block getBlock(String blockId) {
         try {
             return net.minecraftforge.registries.ForgeRegistries.BLOCKS
@@ -239,9 +298,26 @@ public class VoxelBuildManager {
         public String info = "";
         public volatile boolean cancelled = false;
         public volatile boolean finished = false;
+        public volatile boolean areaCleared = false;
+        public volatile boolean clearPending = false;
         public int nextIndex = 0;
         public int placedCount = 0;
         public int lastReported = 0;
+
+        void clearArea(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos center,
+                       Voxelizer.VoxelGrid grid) {
+            int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2, c = 0;
+            for (int dx = -hw; dx <= hw; dx++)
+                for (int dy = -hh; dy <= hh; dy++)
+                    for (int dz = -hd; dz <= hd; dz++)
+                        try {
+                            level.setBlock(center.offset(dx,dy,dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                            c++;
+                        } catch (Exception ignored) {}
+            final int cc = c;
+            source.sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                "§7已清除 " + cc + " 方块"), false);
+        }
 
         public BuildJob(String playerName, PMXModel model, Voxelizer.VoxelGrid grid, CommandSourceStack source) {
             this.playerName = playerName;

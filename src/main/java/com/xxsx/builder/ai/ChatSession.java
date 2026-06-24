@@ -16,6 +16,8 @@ public class ChatSession {
     private String pendingAction = "";
     private Runnable confirmAction;
     private CompletableFuture<?> pendingFuture;
+    public String pendingBuildPath = null;
+    public int pendingBuildBaseScale = 150;
     private static final int MIN_KEEP_RECENT = 8;
 
     public ChatSession(String playerName, int maxMessages) {
