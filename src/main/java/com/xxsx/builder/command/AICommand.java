@@ -202,18 +202,7 @@ public class AICommand {
             return 1;
         }
 
-        // PMX 路径检测
-        String pmxPath = extractPmxPath(input);
-        if (pmxPath != null) {
-            source.sendSuccess(() -> Component.literal("§e检测到 PMX 文件，开始解析..."), false);
-            ModLogger.info("提取 PMX 路径: " + pmxPath);
-            VoxelBuildManager m = XxsxBuilder.getInstance().getBuildManager();
-            if (m != null) m.startBuild(playerName, pmxPath,
-                XxsxBuilder.getInstance().getConfig().defaultScale, source);
-            return 1;
-        }
-
-        // 普通对话
+        // 普通对话 — AI 主导，不强制接管任何输入
         source.sendSuccess(() -> Component.literal("§7[你] " + input), false);
         ModLogger.info("[" + playerName + "] " + input);
 
@@ -282,16 +271,4 @@ public class AICommand {
         });
     }
 
-    // ===== PMX 路径提取 =====
-
-    private static String extractPmxPath(String input) {
-        if (input == null || input.isEmpty()) return null;
-        var qm = java.util.regex.Pattern.compile(
-            "[\"\"\"]([^\"]{5,}\\.pmx)[\"\"\"]", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(input);
-        if (qm.find()) { return qm.group(1).trim(); }
-        var bm = java.util.regex.Pattern.compile(
-            "([A-Za-z]:[\\\\/][^\\s]{5,}\\.pmx)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(input);
-        if (bm.find()) { return bm.group(1).trim(); }
-        return null;
-    }
 }

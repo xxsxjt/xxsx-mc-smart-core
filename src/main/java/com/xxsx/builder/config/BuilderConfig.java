@@ -45,7 +45,7 @@ public class BuilderConfig {
     public static final ForgeConfigSpec.IntValue MAX_VERTICES =
             inner.comment("PMX 最大顶点数").defineInRange("build.max_vertices", 500000, 10000, 5000000);
     public static final ForgeConfigSpec.IntValue DEFAULT_SCALE =
-            inner.comment("默认缩放大小（方块）").defineInRange("build.default_scale", 150, 10, 800);
+            inner.comment("默认缩放大小（方块）").defineInRange("build.default_scale", 300, 10, 2000);
 
     // === Safety ===
     public static final ForgeConfigSpec.ConfigValue<String> COMMAND_BLACKLIST =
@@ -72,7 +72,7 @@ public class BuilderConfig {
     public int confirmThreshold = 100;
     public int blocksPerTick = 200;
     public int maxVertices = 500000;
-    public int defaultScale = 150;
+    public int defaultScale = 300;
     public String commandBlacklist = "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on";
 
     /** 游戏内运行时覆盖的模型名（/ai model 设置） */

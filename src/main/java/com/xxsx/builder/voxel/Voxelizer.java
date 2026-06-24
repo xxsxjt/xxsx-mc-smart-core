@@ -172,9 +172,22 @@ public class Voxelizer {
     }
 
     private static int packColor(float[] rgb, float lightFactor) {
-        int r = clamp((int)(rgb[0] * 255 * lightFactor), 0, 255);
-        int g = clamp((int)(rgb[1] * 255 * lightFactor), 0, 255);
-        int b = clamp((int)(rgb[2] * 255 * lightFactor), 0, 255);
+        // PMX 材质颜色可能是 0-1 浮点，也可能是 0-255 字节值被存在 float 中
+        float maxC = Math.max(rgb[0], Math.max(rgb[1], rgb[2]));
+        float scale;
+        if (maxC > 10.0f) {
+            // 字节范围 (0-255)，需要归一化
+            scale = lightFactor / 255.0f;
+        } else if (maxC > 1.5f) {
+            // 异常值，也按字节处理
+            scale = lightFactor / 255.0f;
+        } else {
+            // 正常 0-1 浮点范围
+            scale = 255.0f * lightFactor;
+        }
+        int r = clamp((int)(rgb[0] * scale), 0, 255);
+        int g = clamp((int)(rgb[1] * scale), 0, 255);
+        int b = clamp((int)(rgb[2] * scale), 0, 255);
         return (255 << 24) | (r << 16) | (g << 8) | b;
     }
 
