@@ -121,8 +121,11 @@ public class SessionManager {
         SessionStore.save(data);
     }
 
+    private String worldName = "";
+
     public ChatSession getSession(String playerName) {
-        return sessions.computeIfAbsent(playerName,
+        String key = (worldName.isEmpty() ? "" : worldName + "/") + playerName;
+        return sessions.computeIfAbsent(key,
                 k -> new ChatSession(playerName, config.memoryMaxMessages, config));
     }
 
@@ -148,6 +151,8 @@ public class SessionManager {
     public void addSystemMessage(String playerName, String content) {
         getSession(playerName).addMessage("system", content);
     }
+
+    public void setWorldName(String name) { this.worldName = name; }
 
     public void reloadProvider() {
         if (defaultProvider != null) defaultProvider.reset();

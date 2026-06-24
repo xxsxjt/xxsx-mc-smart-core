@@ -64,6 +64,8 @@ public class XxsxBuilder {
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("[xxsx_builder] 服务启动 - 初始化AI系统...");
         this.sessionManager = new SessionManager(config);
+        this.sessionManager.setWorldName(
+            event.getServer().getWorldData().getLevelName());
         this.commandExecutor = new CommandExecutor(event.getServer(), config);
         this.buildManager = new VoxelBuildManager(event.getServer());
         AICommand.register(event.getServer().getCommands().getDispatcher());

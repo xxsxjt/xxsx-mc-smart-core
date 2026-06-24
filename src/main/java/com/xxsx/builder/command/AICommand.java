@@ -285,17 +285,15 @@ public class AICommand {
 
             // 执行 [CMD]
             String execResult = exec.executeCommands(processed, source);
-            boolean hasCommands = processed.toUpperCase().contains("[CMD]") && !execResult.isEmpty();
-
-            if (!execResult.isEmpty())
-                source.sendSuccess(() -> ChatFold.foldExecResult(execResult), false);
+            boolean hasCommands = processed.toUpperCase().contains("[CMD]");
 
             if (hasCommands) {
-                // 有指令→反馈结果→继续
-                String feedback = "【执行结果】\n" + execResult
-                    + "\n\n请继续。如任务已完成，回复即可，不要加 [CMD]。";
-                source.sendSuccess(() -> Component.literal("§7── 继续 ──"), false);
-                runAgent(sm, exec, session, feedback, playerPos, anchorPos, source, depth + 1);
+                // 执行指令并反馈结果
+                if (!execResult.isEmpty())
+                    source.sendSuccess(() -> ChatFold.foldExecResult(execResult), false);
+                // 继续下一轮
+                source.sendSuccess(() -> Component.literal("§7── /ai stop 可终止 ──"), false);
+                runAgent(sm, exec, session, "继续。如任务完成，不要加 [CMD]。", playerPos, anchorPos, source, depth + 1);
             }
             // 无指令 = AI 认为任务完成，自然结束
         }, source.getServer())

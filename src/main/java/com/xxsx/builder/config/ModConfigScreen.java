@@ -13,7 +13,9 @@ import java.util.Properties;
 
 /** 主界面弹窗 —— 启动时展示版本+建筑高度设置 */
 public class ModConfigScreen extends Screen {
-    private static final Path PROPS_FILE = Paths.get("server.properties");
+    // Forge 集成服务器从运行目录读 server.properties
+    private static final Path PROPS_FILE = java.nio.file.Paths.get(
+        System.getProperty("user.dir"), "server.properties");
     private EditBox heightInput;
     private String currentHeight = "320";
 
