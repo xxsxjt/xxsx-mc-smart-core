@@ -40,6 +40,9 @@ public class XxsxBuilder {
     public XxsxBuilder() {
         instance = this;
         this.config = new BuilderConfig();
+        // 加载持久化的建造速度
+        int savedSpeed = AICommand.loadBuildSpeed();
+        if (savedSpeed > 0) this.config.buildSpeed = savedSpeed;
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(this::setup);
 
@@ -84,7 +87,7 @@ public class XxsxBuilder {
 
         boolean usingBuiltin = config.providerUrl.isEmpty();
         player.sendSystemMessage(Component.literal(
-            "§b[xxsx的智能核心] §fv1.0.2 已装载"));
+            "§b[xxsx的智能核心] §fv1.0.3 已装载"));
         player.sendSystemMessage(Component.literal(
             usingBuiltin
                 ? "§e当前使用开发者内置 API，多人共用可能卡顿。建议添加自己的模型:"

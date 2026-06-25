@@ -69,7 +69,7 @@ public class BuilderConfig {
     public int apiTimeoutMs = 300000;
     public String knowledgePath = "config/xxsx_builder/knowledge";
     public boolean buildAskClear = true;
-    public int buildSpeed = -1;
+    public int buildSpeed = -1;  // -1=未设置, 用blocks_per_tick
     public int blocksPerTick = 2000;
     public int maxVertices = 500000;
     public int defaultScale = 300;

@@ -326,19 +326,37 @@ public class AICommand {
     private static int handleBuildSpeed(CommandSourceStack src, String n) {
         try {
             int spd = Integer.parseInt(n);
-            // 存到配置文件
+            // 存到配置文件 + 文件持久化
             XxsxBuilder.getInstance().getConfig().buildSpeed = spd;
+            saveBuildSpeed(spd);
             var vm = XxsxBuilder.getInstance().getBuildManager();
             String name = src.getTextName();
             if (vm != null && vm.setSpeed(name, spd)) {
                 src.sendSuccess(() -> Component.literal("§e速度: " + spd + "/tick (" + (spd*20) + "/秒) [已保存]"), false);
             } else {
-                src.sendSuccess(() -> Component.literal("§e速度已保存: " + spd + "/tick (建造开始时生效，重启后保留)"), false);
+                src.sendSuccess(() -> Component.literal("§e速度已保存: " + spd + "/tick (建造开始时生效)"), false);
             }
         } catch (NumberFormatException e) {
             src.sendFailure(Component.literal("§c格式: /ai build speed <数字>"));
         }
         return 1;
+    }
+
+    private static void saveBuildSpeed(int spd) {
+        try {
+            java.nio.file.Files.writeString(
+                java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt"),
+                String.valueOf(spd));
+        } catch (Exception ignored) {}
+    }
+
+    public static int loadBuildSpeed() {
+        try {
+            var p = java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt");
+            if (java.nio.file.Files.exists(p))
+                return Integer.parseInt(java.nio.file.Files.readString(p).trim());
+        } catch (Exception ignored) {}
+        return -1;
     }
 
     private static int handleBuildConfirm(CommandSourceStack src, boolean yes) {

@@ -5,6 +5,8 @@ import org.joml.Vector3f;
 import org.joml.Vector2f;
 
 import java.util.*;
+import java.util.Map;
+import java.util.HashMap;
 
 /** 将 PMX 三角网格体素化为彩色方块网格 */
 public class Voxelizer {
@@ -73,37 +75,27 @@ public class Voxelizer {
             scaledVerts.add(new Vector3f(sx, sy, sz));
         }
 
-        // 4. 收集材质颜色 — 尝试从纹理采样，回退到 diffuse
-        List<float[]> matColors = new ArrayList<>();
-        boolean allGray = true;
+        // 4. 材质颜色 — 优先按面UV采样纹理
+        List<float[]> matDiffuse = new ArrayList<>();
         for (PMXModel.PMXMaterial mat : model.materials) {
-            float[] c = mat.getDiffuseRGB();
-            matColors.add(c);
-            if (Math.abs(c[0]-c[1]) > 0.01 || Math.abs(c[1]-c[2]) > 0.01) allGray = false;
+            matDiffuse.add(mat.getDiffuseRGB());
         }
-        // 如果所有材质都是灰色 → 尝试从纹理文件读取颜色
-        if (allGray && model.faces.size() > 0) {
-            XxsxBuilder.LOGGER.info("[Voxel] 材质全灰({}个), baseDir={}",
-                model.materials.size(), model.textureBaseDir);
-            int texSuccess = 0;
-            for (int mi = 0; mi < model.materials.size(); mi++) {
-                String texPath = model.materials.get(mi).texturePath;
-                String base = model.textureBaseDir;
-                if (base != null && texPath != null && !texPath.isEmpty()) {
-                    java.nio.file.Path fullPath = java.nio.file.Paths.get(base, texPath);
-                    texPath = fullPath.toString();
-                    XxsxBuilder.LOGGER.info("[Voxel] Mat#{} texPath={} → {}", mi,
-                        model.materials.get(mi).texturePath, texPath);
-                }
-                float[] texColor = readTextureAverage(texPath);
-                if (texColor != null) {
-                    matColors.set(mi, texColor);
-                    texSuccess++;
-                    if (texSuccess <= 3) XxsxBuilder.LOGGER.info("[Voxel] Mat#{} color=({:.2f},{:.2f},{:.2f})",
-                        mi, texColor[0], texColor[1], texColor[2]);
+
+        // 预加载所有纹理
+        Map<Integer, byte[]> texCache = new HashMap<>();
+        if (model.textureBaseDir != null) {
+            for (PMXModel.PMXMaterial mat : model.materials) {
+                String tp = mat.texturePath;
+                if (tp == null || tp.isEmpty()) continue;
+                java.nio.file.Path fp = java.nio.file.Paths.get(model.textureBaseDir, tp);
+                if (!texCache.containsKey(mat.hashCode())) {
+                    try {
+                        byte[] d = java.nio.file.Files.readAllBytes(fp);
+                        texCache.put(System.identityHashCode(mat), d);
+                    } catch (Exception ignored) {}
                 }
             }
-            XxsxBuilder.LOGGER.info("[Voxel] 纹理采样: {}/{} 成功", texSuccess, model.materials.size());
+            XxsxBuilder.LOGGER.info("[Voxel] 预加载纹理: {}/{}", texCache.size(), model.materials.size());
         }
 
         // 5. 对每个三角形进行体素化（表面体素化）
@@ -123,10 +115,14 @@ public class Voxelizer {
             int triMaxY = clamp((int) Math.ceil(Math.max(v0.y, Math.max(v1.y, v2.y))), 0, gridH - 1);
             int triMaxZ = clamp((int) Math.ceil(Math.max(v0.z, Math.max(v1.z, v2.z))), 0, gridD - 1);
 
-            // 获取材质颜色 + 法线着色
+            // 颜色：优先纹理采样，回退材质diffuse
             int matIdx = fi < model.faceMaterials.size() ? model.faceMaterials.get(fi) : 0;
-            float[] color = matIdx < matColors.size() ? matColors.get(matIdx) : new float[]{0.8f, 0.8f, 0.8f};
-            // 计算三角形法线用于明暗变化
+            float[] color;
+            // 尝试对面中心UV采样纹理
+            color = sampleTexAtUV(model, matIdx, tri, texCache, matDiffuse);
+            if (color == null)
+                color = matIdx < matDiffuse.size() ? matDiffuse.get(matIdx) : new float[]{0.8f, 0.8f, 0.8f};
+            // 法线着色
             float fnx = (v1.y - v0.y)*(v2.z - v0.z) - (v1.z - v0.z)*(v2.y - v0.y);
             float fny = (v1.z - v0.z)*(v2.x - v0.x) - (v1.x - v0.x)*(v2.z - v0.z);
             float fnz = (v1.x - v0.x)*(v2.y - v0.y) - (v1.y - v0.y)*(v2.x - v0.x);
@@ -218,6 +214,48 @@ public class Voxelizer {
         return Math.max(min, Math.min(max, v));
     }
 
+    /** 在三角形面中心 UV 采样纹理颜色 */
+    private static float[] sampleTexAtUV(PMXModel model, int matIdx, int[] tri,
+                                          Map<Integer, byte[]> texCache, List<float[]> fallback) {
+        try {
+            if (matIdx >= model.materials.size()) return null;
+            PMXModel.PMXMaterial mat = model.materials.get(matIdx);
+            if (mat.texturePath == null || mat.texturePath.isEmpty()) return null;
+            byte[] data = texCache.get(System.identityHashCode(mat));
+            if (data == null || data.length < 18) return null;
+
+            // TGA header
+            int w = ((data[13] & 0xFF) << 8) | (data[12] & 0xFF);
+            int h = ((data[15] & 0xFF) << 8) | (data[14] & 0xFF);
+            int bpp = data[16] & 0xFF;
+            if (w <= 0 || h <= 0 || (bpp != 24 && bpp != 32)) return null;
+            int pixelStart = 18 + (data[0] & 0xFF);
+
+            // 计算三角形中心 UV
+            if (tri[0] >= model.uvs.size() || tri[1] >= model.uvs.size() || tri[2] >= model.uvs.size())
+                return null;
+            org.joml.Vector2f uv0 = model.uvs.get(tri[0]);
+            org.joml.Vector2f uv1 = model.uvs.get(tri[1]);
+            org.joml.Vector2f uv2 = model.uvs.get(tri[2]);
+            float cu = (uv0.x + uv1.x + uv2.x) / 3f;
+            float cv = (uv0.y + uv1.y + uv2.y) / 3f;
+
+            // UV → 像素坐标（TGA 底部优先）
+            int px = clamp((int)(cu * (w - 1)), 0, w - 1);
+            int py = clamp((int)((1f - cv) * (h - 1)), 0, h - 1); // TGA bottom-up
+            int bpr = bpp / 8;
+            int idx = pixelStart + (py * w + px) * bpr;
+            if (idx + bpr > data.length) return null;
+
+            int b = data[idx] & 0xFF;
+            int g = data[idx + 1] & 0xFF;
+            int r = data[idx + 2] & 0xFF;
+            return new float[]{r / 255f, g / 255f, b / 255f};
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** 读取纹理平均色。TGA 无压缩格式。 */
     private static float[] readTextureAverage(String texPath) {
         if (texPath == null || texPath.isEmpty()) return null;
@@ -243,11 +281,14 @@ public class Voxelizer {
             int bytesPerPixel = bpp / 8;
             long sumR = 0, sumG = 0, sumB = 0;
             int count = 0;
-            int maxPixels = Math.min(w * h, 10000); // 采样最多 10000 像素
-
-            for (int i = 0; i < maxPixels && pixelStart + bytesPerPixel <= data.length; i++) {
+            int totalPixels = w * h;
+            // 采样：从中间区域均匀取点（TGA 底部先存，跳过头尾）
+            int skip = Math.max(1, totalPixels / 5000); // 最多 5000 个采样点
+            int startOffset = totalPixels / 10; // 跳过底部 10%（可能是黑边）
+            int endOffset = totalPixels - startOffset; // 跳过顶部 10%
+            for (int i = startOffset; i < endOffset && count < 5000; i += skip) {
                 int idx = pixelStart + (i * bytesPerPixel);
-                // TGA stores BGR(A)
+                if (idx + bytesPerPixel > data.length) break;
                 int b = data[idx] & 0xFF;
                 int g = data[idx + 1] & 0xFF;
                 int r = data[idx + 2] & 0xFF;

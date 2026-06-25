@@ -44,23 +44,7 @@ public class BlockColorMapper {
         add("red_wool",            153,  51,  51);
         add("black_wool",           51,  51,  51);
 
-        // === 陶瓦 (Terracotta) ===
-        add("white_terracotta",    209, 177, 161);
-        add("orange_terracotta",   205, 107,  75);
-        add("magenta_terracotta",  157,  98, 131);
-        add("light_blue_terracotta",122, 132, 155);
-        add("yellow_terracotta",   200, 141,  69);
-        add("lime_terracotta",     139, 125,  75);
-        add("pink_terracotta",     160, 125, 125);
-        add("gray_terracotta",     118, 117, 107);
-        add("light_gray_terracotta",167, 163, 157);
-        add("cyan_terracotta",     117,  97,  88);
-        add("purple_terracotta",   113,  83, 125);
-        add("blue_terracotta",      91,  94, 122);
-        add("brown_terracotta",     90,  61,  48);
-        add("green_terracotta",     86,  69,  55);
-        add("red_terracotta",      140,  59,  53);
-        add("black_terracotta",     58,  44,  39);
+        // 陶瓦不用——实际渲染色和理论值偏差大
 
         // === 玻璃 (Glass) ===
         add("white_stained_glass",       255, 255, 255);

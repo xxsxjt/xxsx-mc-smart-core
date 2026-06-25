@@ -226,6 +226,7 @@ public class PMXParser {
             float ar = buf.getFloat(), ag = buf.getFloat(), ab = buf.getFloat();
             float sr = buf.getFloat(), sg = buf.getFloat(), sb = buf.getFloat();
             float sp = buf.getFloat();
+            int drawFlags = buf.get() & 0xFF; // Drawing flags (1 byte, between specular and edge)
             float[] edgeCol = new float[]{buf.getFloat(), buf.getFloat(), buf.getFloat(), buf.getFloat()};
             float edgeSize = buf.getFloat();
 
