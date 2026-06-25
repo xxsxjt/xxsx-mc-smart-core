@@ -131,20 +131,33 @@ public class VoxelBuildManager {
     /** y确认清除 */
     public boolean confirmClear(String playerName) {
         BuildJob job = jobs.get(playerName);
-        if (job != null && job.clearPending) {
-            job.clearPending = false;
+        if (job != null && job.clearState == 1) {
+            job.clearState = 2; // → 清除中
+            job.clearIndex = 0;
+            job.source.sendSuccess(() -> Component.literal("§a开始清除区域..."), false);
             return true;
         }
         return false;
     }
 
-    /** n拒绝清除 */
+    /** n跳过清除 */
     public boolean cancelClear(String playerName) {
         BuildJob job = jobs.get(playerName);
-        if (job != null && job.clearPending) {
-            job.clearPending = false;
-            job.areaCleared = true; // 跳过清除，直接开始建造
+        if (job != null && job.clearState == 1) {
+            job.clearState = 3; // → 已跳过
             job.source.sendSuccess(() -> Component.literal("§7跳过清除，直接建造"), false);
+            return true;
+        }
+        return false;
+    }
+
+    /** 设置建造速度 */
+    public boolean setSpeed(String playerName, int speed) {
+        BuildJob job = jobs.get(playerName);
+        if (job != null && !job.finished) {
+            job.buildSpeed = Math.max(10, Math.min(5000, speed));
+            job.source.sendSuccess(() -> Component.literal(
+                "§e建造速度: " + job.buildSpeed + "/tick (" + (job.buildSpeed*20) + "/秒)"), false);
             return true;
         }
         return false;
@@ -181,36 +194,60 @@ public class VoxelBuildManager {
                         (int) job.source.getPosition().z);
 
                 Voxelizer.VoxelGrid grid = job.grid;
+                int speed = job.buildSpeed > 0 ? job.buildSpeed : perTick;
 
-                // 询问是否清除建筑区域
-                if (config.buildAskClear && !job.areaCleared) {
-                    job.areaCleared = true;
+                // === 清除区域 ===
+                if (config.buildAskClear && job.clearState == 0) {
+                    job.clearState = 1; // → 询问
                     final int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
                     final int count = (hw*2+1) * (hh*2+1) * (hd*2+1);
-                    // 可点击的 y/n 提示
+                    job.clearTotal = count;
                     net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
                         "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)? ");
                     net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a[ 是(Y) ]");
                     yes.setStyle(yes.getStyle().withClickEvent(
-                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai y")));
+                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai build y")));
                     msg.append(yes).append(" ");
                     net.minecraft.network.chat.MutableComponent no = net.minecraft.network.chat.Component.literal("§c[ 否(N) ]");
                     no.setStyle(no.getStyle().withClickEvent(
-                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai n")));
+                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai build n")));
                     msg.append(no);
                     job.source.sendSuccess(() -> msg, false);
-                    job.clearPending = true;
                     return;
                 }
 
-                // 处理清除确认
-                if (job.clearPending) {
-                    job.clearArea(level, center, grid);
-                    job.clearPending = false;
+                if (job.clearState == 2) {
+                    // 分帧清除，和建造同速度
+                    int cleared = 0;
+                    int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
+                    while (cleared < speed && job.clearIndex < job.clearTotal) {
+                        int idx = job.clearIndex++;
+                        int dx = (idx % (hw*2+1)) - hw;
+                        int rem = idx / (hw*2+1);
+                        int dy = (rem % (hh*2+1)) - hh;
+                        int dz = (rem / (hh*2+1)) - hd;
+                        try {
+                            level.setBlock(center.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                            cleared++;
+                        } catch (Exception ignored) {}
+                    }
+                    if (job.clearIndex % (speed * 100) == 0 || job.clearIndex >= job.clearTotal) {
+                        int pct = job.clearIndex * 100 / Math.max(1, job.clearTotal);
+                        job.source.sendSuccess(() -> Component.literal(
+                            "§7清除: " + pct + "% (" + job.clearIndex + "/" + job.clearTotal + ")"), false);
+                    }
+                    if (job.clearIndex >= job.clearTotal) {
+                        job.clearState = 3; // → 已清除
+                        job.source.sendSuccess(() -> Component.literal(
+                            "§a清除完成: " + job.clearTotal + " 方块"), false);
+                    }
+                    return;
                 }
 
+                // 等待确认或已跳过 → 开始建造
+                if (job.clearState != 1) {
                 int placed = 0;
-                while (placed < perTick && job.nextIndex < totalVoxels(grid)) {
+                while (placed < speed && job.nextIndex < totalVoxels(grid)) {
                     int idx = job.nextIndex++;
                     int x = idx % grid.width;
                     int y = (idx / grid.width) % grid.height;
@@ -251,13 +288,8 @@ public class VoxelBuildManager {
                             + " 尺寸=" + job.grid.width + "x" + job.grid.height + "x" + job.grid.depth
                             + "。如果比例不合适，用户可以说'太大了'或'缩小到X'，你可用 /ai build 重新建。");
                     }
-                } else if (job.placedCount - job.lastReported >= total / 10 || job.placedCount == total) {
-                    int pct = job.placedCount * 100 / Math.max(1, total);
-                    job.source.sendSuccess(() -> Component.literal(
-                            String.format("§7🏗 进度: %d%% | %d/%d 方块", pct, job.placedCount, total)), false);
-                    job.lastReported = job.placedCount;
-                }
-
+                } // end if clearState != 1
+                } // end try
             } catch (Exception e) {
                 XxsxBuilder.LOGGER.error("[Build] 放置方块异常", e);
                 job.source.sendFailure(Component.literal("§c生成出错: " + e.getMessage()));
@@ -303,8 +335,11 @@ public class VoxelBuildManager {
         public String info = "";
         public volatile boolean cancelled = false;
         public volatile boolean finished = false;
-        public volatile boolean areaCleared = false;
-        public volatile boolean clearPending = false;
+        // 0=未开始 1=询问中 2=清除中 3=已清除/已跳过
+        public volatile int clearState = 0;
+        public int clearIndex = 0;
+        public int clearTotal = 0;
+        public int buildSpeed = -1; // -1=用全局默认
         public int nextIndex = 0;
         public int placedCount = 0;
         public int lastReported = 0;
