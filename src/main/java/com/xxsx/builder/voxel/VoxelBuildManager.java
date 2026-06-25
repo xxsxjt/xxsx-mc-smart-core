@@ -187,8 +187,18 @@ public class VoxelBuildManager {
                     job.areaCleared = true;
                     final int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
                     final int count = (hw*2+1) * (hh*2+1) * (hd*2+1);
-                    job.source.sendSuccess(() -> net.minecraft.network.chat.Component.literal(
-                        "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)为空气? (y/n)"), false);
+                    // 可点击的 y/n 提示
+                    net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
+                        "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)? ");
+                    net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a§l[Y]");
+                    yes.setStyle(yes.getStyle().withClickEvent(
+                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai y")));
+                    msg.append(yes).append(" ");
+                    net.minecraft.network.chat.MutableComponent no = net.minecraft.network.chat.Component.literal("§c§l[N]");
+                    no.setStyle(no.getStyle().withClickEvent(
+                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai n")));
+                    msg.append(no);
+                    job.source.sendSuccess(() -> msg, false);
                     job.clearPending = true;
                     return;
                 }
