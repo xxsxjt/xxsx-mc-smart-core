@@ -227,14 +227,14 @@ public class VoxelBuildManager {
                         int dy = (rem % (hh*2+1)) - hh;
                         int dz = (rem / (hh*2+1)) - hd;
                         try {
-                            level.setBlock(center.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                            level.setBlock(center.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2); // flag2=无邻居更新
                             cleared++;
                         } catch (Exception ignored) {}
                     }
-                    if (job.clearIndex % (speed * 100) == 0 || job.clearIndex >= job.clearTotal) {
+                    if (job.clearIndex % (speed * 20) == 0 || job.clearIndex >= job.clearTotal) {
                         int pct = job.clearIndex * 100 / Math.max(1, job.clearTotal);
                         job.source.sendSuccess(() -> Component.literal(
-                            "§7清除: " + pct + "% (" + job.clearIndex + "/" + job.clearTotal + ")"), false);
+                            "§7清除: " + pct + "% (" + job.clearIndex + "/" + job.clearTotal + ", " + speed + "/tick)"), false);
                     }
                     if (job.clearIndex >= job.clearTotal) {
                         job.clearState = 3; // → 已清除
@@ -364,6 +364,9 @@ public class VoxelBuildManager {
             this.model = model;
             this.grid = grid;
             this.source = source;
+            // 初始用配置的速度
+            var c = XxsxBuilder.getInstance().getConfig();
+            this.buildSpeed = c.buildSpeed > 0 ? c.buildSpeed : c.blocksPerTick;
         }
     }
 }

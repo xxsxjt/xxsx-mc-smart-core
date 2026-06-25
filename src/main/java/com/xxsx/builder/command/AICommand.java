@@ -116,6 +116,24 @@ public class AICommand {
                                                     return 1;
                                                 })))))
                 .then(Commands.literal("build")
+                        .executes(ctx -> {
+                            ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§e/ai build <路径> — PMX体素建筑\n" +
+                                "§e/ai build y — 确认清除\n" +
+                                "§e/ai build n — 跳过清除\n" +
+                                "§e/ai build stop — 停止\n" +
+                                "§e/ai build speed <数字> — 调速 (默认500/tick)"), false);
+                            return 1;
+                        })
+                        .then(Commands.literal("speed")
+                                .then(Commands.argument("n", StringArgumentType.word())
+                                        .executes(ctx -> handleBuildSpeed(ctx.getSource(), StringArgumentType.getString(ctx, "n")))))
+                        .then(Commands.literal("y")
+                                .executes(ctx -> handleBuildConfirm(ctx.getSource(), true)))
+                        .then(Commands.literal("n")
+                                .executes(ctx -> handleBuildConfirm(ctx.getSource(), false)))
+                        .then(Commands.literal("stop")
+                                .executes(ctx -> handleBuildStop(ctx.getSource())))
                         .then(Commands.argument("path", StringArgumentType.greedyString())
                                 .executes(ctx -> handleBuildCommand(
                                     StringArgumentType.getString(ctx, "path").trim(),
@@ -155,56 +173,6 @@ public class AICommand {
             if (!c) source.sendFailure(Component.literal("§c没有正在执行的任务"));
             return 1;
         }
-        // ===== Build 工具体系（不经过 AI） =====
-
-        // /ai build stop
-        if (input.startsWith("build stop") || input.equals("build cancel")) {
-            VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
-            if (vm != null && vm.cancelBuild(playerName)) {
-                source.sendSuccess(() -> Component.literal("§a建造已停止"), false);
-            } else {
-                source.sendFailure(Component.literal("§c没有活跃的建造任务"));
-            }
-            return 1;
-        }
-
-        // /ai build speed N
-        if (input.startsWith("build speed ")) {
-            try {
-                int spd = Integer.parseInt(input.substring(12).trim());
-                VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
-                if (vm != null && vm.setSpeed(playerName, spd)) {
-                    source.sendSuccess(() -> Component.literal("§e速度已更新: " + spd + "/tick"), false);
-                } else {
-                    source.sendFailure(Component.literal("§c没有活跃的建造任务"));
-                }
-                return 1;
-            } catch (NumberFormatException e) {
-                source.sendFailure(Component.literal("§c格式: /ai build speed <数字>"));
-                return 1;
-            }
-        }
-
-        // /ai build y / /ai build n — 确认/跳过清除
-        if (input.startsWith("build y") || input.equals("build yes")) {
-            VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
-            if (vm != null && vm.confirmClear(playerName)) {
-                source.sendSuccess(() -> Component.literal("§a已确认清除"), false);
-            } else {
-                source.sendFailure(Component.literal("§c没有待确认的建造"));
-            }
-            return 1;
-        }
-        if (input.startsWith("build n") || input.equals("build no")) {
-            VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
-            if (vm != null && vm.cancelClear(playerName)) {
-                source.sendSuccess(() -> Component.literal("§7跳过清除"), false);
-            } else {
-                source.sendFailure(Component.literal("§c没有待确认的建造"));
-            }
-            return 1;
-        }
-
         // 数字输入 → build 倍数确认（不匹配则忽略，不发AI）
         try {
             int multiplier = Integer.parseInt(input);
@@ -216,7 +184,12 @@ public class AICommand {
                 source.sendSuccess(() -> Component.literal(
                     "§e倍数 " + multiplier + "x → 实际比例 " + actualScale), false);
                 VoxelBuildManager m = XxsxBuilder.getInstance().getBuildManager();
-                if (m != null) m.startBuild(playerName, path, actualScale, source);
+                if (m != null) {
+                    m.startBuild(playerName, path, actualScale, source);
+                    // 应用预设速度
+                    if (session.pendingBuildSpeed > 0)
+                        m.setSpeed(playerName, session.pendingBuildSpeed);
+                }
                 return 1;
             }
             // 纯数字无pending build → 忽略，不发AI
@@ -348,6 +321,48 @@ public class AICommand {
                 source.sendFailure(Component.literal("§cAI 异常: " + e.getMessage()));
             return null;
         });
+    }
+
+    private static int handleBuildSpeed(CommandSourceStack src, String n) {
+        try {
+            int spd = Integer.parseInt(n);
+            // 存到配置文件
+            XxsxBuilder.getInstance().getConfig().buildSpeed = spd;
+            var vm = XxsxBuilder.getInstance().getBuildManager();
+            String name = src.getTextName();
+            if (vm != null && vm.setSpeed(name, spd)) {
+                src.sendSuccess(() -> Component.literal("§e速度: " + spd + "/tick (" + (spd*20) + "/秒) [已保存]"), false);
+            } else {
+                src.sendSuccess(() -> Component.literal("§e速度已保存: " + spd + "/tick (建造开始时生效，重启后保留)"), false);
+            }
+        } catch (NumberFormatException e) {
+            src.sendFailure(Component.literal("§c格式: /ai build speed <数字>"));
+        }
+        return 1;
+    }
+
+    private static int handleBuildConfirm(CommandSourceStack src, boolean yes) {
+        var vm = XxsxBuilder.getInstance().getBuildManager();
+        if (vm == null) return 1;
+        if (yes) {
+            if (vm.confirmClear(src.getTextName()))
+                src.sendSuccess(() -> Component.literal("§a已确认，正在清除..."), false);
+            else src.sendFailure(Component.literal("§c没有待确认的建造"));
+        } else {
+            if (vm.cancelClear(src.getTextName()))
+                src.sendSuccess(() -> Component.literal("§7已跳过清除"), false);
+            else src.sendFailure(Component.literal("§c没有待确认的建造"));
+        }
+        return 1;
+    }
+
+    private static int handleBuildStop(CommandSourceStack src) {
+        var vm = XxsxBuilder.getInstance().getBuildManager();
+        if (vm != null && vm.cancelBuild(src.getTextName()))
+            src.sendSuccess(() -> Component.literal("§a建造已停止"), false);
+        else
+            src.sendFailure(Component.literal("§c没有活跃的建造"));
+        return 1;
     }
 
     /** /ai build 两步交互：先展示1倍坐标，再等用户输入倍数 */

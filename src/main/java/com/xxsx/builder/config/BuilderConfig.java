@@ -38,8 +38,10 @@ public class BuilderConfig {
     // === Build ===
     public static final ForgeConfigSpec.BooleanValue BUILD_ASK_CLEAR =
             inner.comment("建筑前询问是否清除周围区域").define("build.ask_clear", true);
+    public static final ForgeConfigSpec.IntValue BUILD_SPEED =
+            inner.comment("建造速度（每tick方块数，-1=使用默认blocks_per_tick）").defineInRange("build.speed", -1, -1, 10000);
     public static final ForgeConfigSpec.IntValue BLOCKS_PER_TICK =
-            inner.comment("每 tick 放置方块数（20tick=1秒，500=10000方块/秒）").defineInRange("build.blocks_per_tick", 500, 10, 5000);
+            inner.comment("每 tick 放置方块数（20tick=1秒，2000=40000方块/秒）").defineInRange("build.blocks_per_tick", 2000, 10, 10000);
     public static final ForgeConfigSpec.IntValue MAX_VERTICES =
             inner.comment("PMX 最大顶点数").defineInRange("build.max_vertices", 500000, 10000, 5000000);
     public static final ForgeConfigSpec.IntValue DEFAULT_SCALE =
@@ -67,7 +69,8 @@ public class BuilderConfig {
     public int apiTimeoutMs = 300000;
     public String knowledgePath = "config/xxsx_builder/knowledge";
     public boolean buildAskClear = true;
-    public int blocksPerTick = 500;
+    public int buildSpeed = -1;
+    public int blocksPerTick = 2000;
     public int maxVertices = 500000;
     public int defaultScale = 300;
     public String commandBlacklist = "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on";
@@ -93,6 +96,7 @@ public class BuilderConfig {
         c.apiTimeoutMs = API_TIMEOUT_MS.get();
         c.knowledgePath = KNOWLEDGE_PATH.get();
         c.buildAskClear = BUILD_ASK_CLEAR.get();
+        c.buildSpeed = BUILD_SPEED.get();
         c.blocksPerTick = BLOCKS_PER_TICK.get();
         c.maxVertices = MAX_VERTICES.get();
         c.defaultScale = DEFAULT_SCALE.get();
@@ -114,6 +118,7 @@ public class BuilderConfig {
         this.apiTimeoutMs = other.apiTimeoutMs;
         this.knowledgePath = other.knowledgePath;
         this.buildAskClear = other.buildAskClear;
+        this.buildSpeed = other.buildSpeed;
         this.blocksPerTick = other.blocksPerTick;
         this.maxVertices = other.maxVertices;
         this.defaultScale = other.defaultScale;

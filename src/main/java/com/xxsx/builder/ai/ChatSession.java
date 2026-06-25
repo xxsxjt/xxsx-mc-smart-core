@@ -18,6 +18,7 @@ public class ChatSession {
     private CompletableFuture<?> pendingFuture;
     public String pendingBuildPath = null;
     public int pendingBuildBaseScale = 150;
+    public int pendingBuildSpeed = -1; // -1=未指定, 用配置默认值
     private static final int MIN_KEEP_RECENT = 8;
 
     public ChatSession(String playerName, int maxMessages) {
