@@ -84,7 +84,7 @@ public class XxsxBuilder {
 
         boolean usingBuiltin = config.providerUrl.isEmpty();
         player.sendSystemMessage(Component.literal(
-            "§b[xxsx的智能核心] §fv1.0.1 已装载"));
+            "§b[xxsx的智能核心] §fv1.0.2 已装载"));
         player.sendSystemMessage(Component.literal(
             usingBuiltin
                 ? "§e当前使用开发者内置 API，多人共用可能卡顿。建议添加自己的模型:"
