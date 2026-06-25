@@ -80,23 +80,8 @@ public class BlockColorMapper {
         add("red_stained_glass",         152,  29,  36);
         add("black_stained_glass",       56,  56,  56);
 
-        // === 带釉陶瓦 (Glazed Terracotta) ===
-        add("white_glazed_terracotta",       212, 190, 172);
-        add("orange_glazed_terracotta",      237, 126,  37);
-        add("magenta_glazed_terracotta",     180,  80, 148);
-        add("light_blue_glazed_terracotta",  100, 163, 194);
-        add("yellow_glazed_terracotta",      235, 195,  62);
-        add("lime_glazed_terracotta",        118, 179,  60);
-        add("pink_glazed_terracotta",        215, 132, 159);
-        add("gray_glazed_terracotta",         97,  97,  97);
-        add("light_gray_glazed_terracotta",  160, 156, 154);
-        add("cyan_glazed_terracotta",         72, 125, 132);
-        add("purple_glazed_terracotta",      135,  70, 154);
-        add("blue_glazed_terracotta",         69,  82, 137);
-        add("brown_glazed_terracotta",       110,  68,  49);
-        add("green_glazed_terracotta",      103, 124,  54);
-        add("red_glazed_terracotta",         186,  60,  52);
-        add("black_glazed_terracotta",        50,  40,  37);
+        // 带釉陶瓦不用——图案复杂非纯色
+        // 总共 64 种纯色方块（4类 x 16色）
     }
 
     private static void add(String block, int r, int g, int b) {

@@ -44,6 +44,9 @@ public class PMXModel {
         }
     }
 
+    /** PMX 文件所在目录（用于查找纹理） */
+    public String textureBaseDir = null;
+
     public int getFaceCount() { return faces.size(); }
     public int getVertexCount() { return vertices.size(); }
 }

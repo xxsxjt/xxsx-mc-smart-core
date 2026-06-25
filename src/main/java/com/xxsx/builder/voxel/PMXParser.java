@@ -33,7 +33,9 @@ public class PMXParser {
             buf = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         }
         try {
-            return parseModel();
+            PMXModel model = parseModel();
+            model.textureBaseDir = filePath.getParent() != null ? filePath.getParent().toString() : ".";
+            return model;
         } catch (Exception e) {
             throw new RuntimeException("解析失败 (phase=" + phase + ", pos=" + buf.position() + "/" + buf.capacity() + "): " + e.getMessage(), e);
         }

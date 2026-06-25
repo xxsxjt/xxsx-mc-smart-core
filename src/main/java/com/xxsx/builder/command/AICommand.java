@@ -165,7 +165,7 @@ public class AICommand {
             if (vm != null && vm.cancelClear(playerName)) { return 1; }
         }
 
-        // 数字输入 → build 倍数确认
+        // 数字输入 → build 倍数确认（不匹配则忽略，不发AI）
         try {
             int multiplier = Integer.parseInt(input);
             ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
@@ -179,6 +179,9 @@ public class AICommand {
                 if (m != null) m.startBuild(playerName, path, actualScale, source);
                 return 1;
             }
+            // 纯数字无pending build → 忽略，不发AI
+            source.sendSuccess(() -> Component.literal("§7没有待确认的倍数输入"), false);
+            return 1;
         } catch (NumberFormatException ignored) {}
 
         // clear

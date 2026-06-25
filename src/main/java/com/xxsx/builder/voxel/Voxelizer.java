@@ -73,10 +73,29 @@ public class Voxelizer {
             scaledVerts.add(new Vector3f(sx, sy, sz));
         }
 
-        // 4. 收集材质颜色
+        // 4. 收集材质颜色 — 尝试从纹理采样，回退到 diffuse
         List<float[]> matColors = new ArrayList<>();
+        boolean allGray = true;
         for (PMXModel.PMXMaterial mat : model.materials) {
-            matColors.add(mat.getDiffuseRGB());
+            float[] c = mat.getDiffuseRGB();
+            matColors.add(c);
+            if (Math.abs(c[0]-c[1]) > 0.01 || Math.abs(c[1]-c[2]) > 0.01) allGray = false;
+        }
+        // 如果所有材质都是灰色 → 尝试从纹理文件读取颜色
+        if (allGray && model.faces.size() > 0) {
+            XxsxBuilder.LOGGER.info("[Voxel] 材质全灰, 尝试从纹理采样...");
+            for (int mi = 0; mi < model.materials.size(); mi++) {
+                String texPath = model.materials.get(mi).texturePath;
+                String base = model.textureBaseDir;
+                if (base != null && texPath != null && !texPath.isEmpty()) {
+                    java.nio.file.Path fullPath = java.nio.file.Paths.get(base, texPath);
+                    texPath = fullPath.toString();
+                }
+                float[] texColor = readTextureAverage(texPath);
+                if (texColor != null) {
+                    matColors.set(mi, texColor);
+                }
+            }
         }
 
         // 5. 对每个三角形进行体素化（表面体素化）
@@ -189,5 +208,49 @@ public class Voxelizer {
 
     private static int clamp(int v, int min, int max) {
         return Math.max(min, Math.min(max, v));
+    }
+
+    /** 读取纹理平均色。TGA 无压缩格式。 */
+    private static float[] readTextureAverage(String texPath) {
+        if (texPath == null || texPath.isEmpty()) return null;
+        try {
+            // 从 PMX 模型的纹理路径读取
+            // texPath 可能是 Unicode 路径
+            java.nio.file.Path p = java.nio.file.Paths.get(texPath.replace("\\", "/"));
+            if (!java.nio.file.Files.exists(p)) return null;
+
+            byte[] data = java.nio.file.Files.readAllBytes(p);
+            if (data.length < 18) return null;
+
+            // TGA header: width at bytes 12-13, height at 14-15, bpp at 16
+            int w = ((data[13] & 0xFF) << 8) | (data[12] & 0xFF);
+            int h = ((data[15] & 0xFF) << 8) | (data[14] & 0xFF);
+            int bpp = data[16] & 0xFF;
+            int imgType = data[2] & 0xFF;
+            if (w <= 0 || h <= 0 || (bpp != 24 && bpp != 32)) return null;
+
+            int pixelStart = 18 + (data[0] & 0xFF);
+            if (imgType != 2) return null; // 只支持无压缩 RGB
+
+            int bytesPerPixel = bpp / 8;
+            long sumR = 0, sumG = 0, sumB = 0;
+            int count = 0;
+            int maxPixels = Math.min(w * h, 10000); // 采样最多 10000 像素
+
+            for (int i = 0; i < maxPixels && pixelStart + bytesPerPixel <= data.length; i++) {
+                int idx = pixelStart + (i * bytesPerPixel);
+                // TGA stores BGR(A)
+                int b = data[idx] & 0xFF;
+                int g = data[idx + 1] & 0xFF;
+                int r = data[idx + 2] & 0xFF;
+                sumR += r; sumG += g; sumB += b;
+                count++;
+            }
+
+            if (count == 0) return null;
+            return new float[]{sumR / (255f * count), sumG / (255f * count), sumB / (255f * count)};
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
