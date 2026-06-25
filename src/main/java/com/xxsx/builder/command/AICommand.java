@@ -288,12 +288,13 @@ public class AICommand {
             if (hasCommands) {
                 if (!execResult.isEmpty())
                     source.sendSuccess(() -> ChatFold.foldExecResult(execResult), false);
-                // 等清除确认完成后再继续
+                // 如果触发了建造 → 停止 agent，建造有自己的交互(y/n/倍数)
                 VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
-                if (vm != null && vm.hasClearPending(session.playerName)) {
-                    source.sendSuccess(() -> Component.literal("§7等待清除确认... (y/n)"), false);
-                    return; // 暂停 agent，等用户 y/n
+                if (vm != null && vm.hasActiveJob(session.playerName)) {
+                    source.sendSuccess(() -> Component.literal("§7建造进行中，完成后可继续对话"), false);
+                    return;
                 }
+                // 否则继续 agent 循环
                 runAgent(sm, exec, session, "继续", playerPos, anchorPos, source, depth + 1);
             }
             // 无指令 = AI 认为任务完成，自然结束

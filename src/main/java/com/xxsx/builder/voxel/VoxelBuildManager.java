@@ -122,10 +122,10 @@ public class VoxelBuildManager {
         });
     }
 
-    /** 是否有待处理的清除确认 */
-    public boolean hasClearPending(String playerName) {
+    /** 是否有活跃的建筑任务 */
+    public boolean hasActiveJob(String playerName) {
         BuildJob job = jobs.get(playerName);
-        return job != null && job.clearPending;
+        return job != null && !job.finished && !job.cancelled;
     }
 
     /** y确认清除 */
