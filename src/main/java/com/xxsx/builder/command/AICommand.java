@@ -118,11 +118,11 @@ public class AICommand {
                 .then(Commands.literal("build")
                         .executes(ctx -> {
                             ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§e/ai build <路径> — PMX体素建筑\n" +
-                                "§e/ai build y — 确认清除\n" +
-                                "§e/ai build n — 跳过清除\n" +
-                                "§e/ai build stop — 停止\n" +
-                                "§e/ai build speed <数字> — 调速 (默认500/tick)"), false);
+                                "§e/ai build <路径> — 解析PMX\n" +
+                                "§6/ai <数字> — 输入倍数(如 /ai 3)\n" +
+                                "§e/ai build y/n — 确认/跳过清除\n" +
+                                "§e/ai build stop — 停止建造\n" +
+                                "§e/ai build speed <数字> — 调速"), false);
                             return 1;
                         })
                         .then(Commands.literal("speed")
@@ -432,7 +432,7 @@ public class AICommand {
                 "§71x大小: " + w1 + "x" + h1 + "x" + d1 + " 方块"
                 + " | 建议倍数1-10 (如3=" + (w1*3) + "x" + (h1*3) + "x" + (d1*3) + ")"), false);
             src.sendSuccess(() -> Component.literal(
-                "§6输入倍数 (稍后 y/n 清区域):"), false);
+                "§6输入倍数: /ai 3 (数字前加/ai) | §7/ai build stop 取消"), false);
 
             // 存待确认状态
             ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
