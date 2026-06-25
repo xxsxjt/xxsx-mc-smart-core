@@ -83,19 +83,27 @@ public class Voxelizer {
         }
         // 如果所有材质都是灰色 → 尝试从纹理文件读取颜色
         if (allGray && model.faces.size() > 0) {
-            XxsxBuilder.LOGGER.info("[Voxel] 材质全灰, 尝试从纹理采样...");
+            XxsxBuilder.LOGGER.info("[Voxel] 材质全灰({}个), baseDir={}",
+                model.materials.size(), model.textureBaseDir);
+            int texSuccess = 0;
             for (int mi = 0; mi < model.materials.size(); mi++) {
                 String texPath = model.materials.get(mi).texturePath;
                 String base = model.textureBaseDir;
                 if (base != null && texPath != null && !texPath.isEmpty()) {
                     java.nio.file.Path fullPath = java.nio.file.Paths.get(base, texPath);
                     texPath = fullPath.toString();
+                    XxsxBuilder.LOGGER.info("[Voxel] Mat#{} texPath={} → {}", mi,
+                        model.materials.get(mi).texturePath, texPath);
                 }
                 float[] texColor = readTextureAverage(texPath);
                 if (texColor != null) {
                     matColors.set(mi, texColor);
+                    texSuccess++;
+                    if (texSuccess <= 3) XxsxBuilder.LOGGER.info("[Voxel] Mat#{} color=({:.2f},{:.2f},{:.2f})",
+                        mi, texColor[0], texColor[1], texColor[2]);
                 }
             }
+            XxsxBuilder.LOGGER.info("[Voxel] 纹理采样: {}/{} 成功", texSuccess, model.materials.size());
         }
 
         // 5. 对每个三角形进行体素化（表面体素化）

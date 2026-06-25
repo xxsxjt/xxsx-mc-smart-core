@@ -190,11 +190,11 @@ public class VoxelBuildManager {
                     // 可点击的 y/n 提示
                     net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
                         "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)? ");
-                    net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a§l[Y]");
+                    net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a[ 是(Y) ]");
                     yes.setStyle(yes.getStyle().withClickEvent(
                         new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai y")));
                     msg.append(yes).append(" ");
-                    net.minecraft.network.chat.MutableComponent no = net.minecraft.network.chat.Component.literal("§c§l[N]");
+                    net.minecraft.network.chat.MutableComponent no = net.minecraft.network.chat.Component.literal("§c[ 否(N) ]");
                     no.setStyle(no.getStyle().withClickEvent(
                         new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai n")));
                     msg.append(no);
