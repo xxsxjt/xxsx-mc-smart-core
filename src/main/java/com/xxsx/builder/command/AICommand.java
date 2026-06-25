@@ -142,10 +142,15 @@ public class AICommand {
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§e/ai <消息> — AI 对话\n" +
-                        "§e/ai build <路径> [比例] — 直接解析 PMX\n" +
+                        "§e/ai build <路径> — 解析PMX模型\n" +
+                        "§6/ai <数字> — 输入建造倍数(如 /ai 3)\n" +
+                        "§e/ai build y/n — 确认/跳过清除\n" +
+                        "§e/ai build speed <N> — 调速\n" +
+                        "§e/ai build stop — 停止建造\n" +
                         "§e/ai api/model — 切换模型\n" +
-                        "§e/ai addmodel — 添加个人模型\n" +
-                        "§e/ai stop/clear"), false);
+                        "§e/ai addmodel <url> <key> <模型名> [ctx长度] — 添加个人API\n" +
+                        "§e/ai stop — 终止当前任务\n" +
+                        "§e/ai clear — 清除对话历史"), false);
                     return 1;
                 })
         );
@@ -432,7 +437,8 @@ public class AICommand {
                 "§71x大小: " + w1 + "x" + h1 + "x" + d1 + " 方块"
                 + " | 建议倍数1-10 (如3=" + (w1*3) + "x" + (h1*3) + "x" + (d1*3) + ")"), false);
             src.sendSuccess(() -> Component.literal(
-                "§6输入倍数: /ai 3 (数字前加/ai) | §7/ai build stop 取消"), false);
+                "§6输入倍数: /ai 3 (数字前加/ai) | §7调速: /ai build speed <数字>\n" +
+                "§7默认1000/tick, 大模型可设500+防卡顿, 小模型可设5000+加速"), false);
 
             // 存待确认状态
             ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);

@@ -83,24 +83,50 @@ public class Voxelizer {
 
         // 预加载所有纹理
         Map<Integer, byte[]> texCache = new HashMap<>();
+        int texLoadOk = 0, texLoadFail = 0, texSkipped = 0;
         if (model.textureBaseDir != null) {
             for (PMXModel.PMXMaterial mat : model.materials) {
                 String tp = mat.texturePath;
-                if (tp == null || tp.isEmpty()) continue;
+                if (tp == null || tp.isEmpty()) {
+                    texSkipped++;
+                    continue;
+                }
                 java.nio.file.Path fp = java.nio.file.Paths.get(model.textureBaseDir, tp);
-                if (!texCache.containsKey(mat.hashCode())) {
+                if (!texCache.containsKey(System.identityHashCode(mat))) {
                     try {
                         byte[] d = java.nio.file.Files.readAllBytes(fp);
-                        texCache.put(System.identityHashCode(mat), d);
-                    } catch (Exception ignored) {}
+                        // 快速校验 TGA 头部
+                        if (d.length >= 18) {
+                            int imgType = d[2] & 0xFF;
+                            int w = ((d[13] & 0xFF) << 8) | (d[12] & 0xFF);
+                            int h = ((d[15] & 0xFF) << 8) | (d[14] & 0xFF);
+                            if (imgType == 2 && w > 0 && h > 0) {
+                                texCache.put(System.identityHashCode(mat), d);
+                                texLoadOk++;
+                            } else {
+                                XxsxBuilder.LOGGER.warn("[Voxel] 纹理格式不支持: {} (type={}, {}x{})",
+                                    tp, imgType, w, h);
+                                texLoadFail++;
+                            }
+                        } else {
+                            texLoadFail++;
+                        }
+                    } catch (Exception e) {
+                        XxsxBuilder.LOGGER.warn("[Voxel] 纹理加载失败: {} → {}", tp, e.getMessage());
+                        texLoadFail++;
+                    }
                 }
             }
-            XxsxBuilder.LOGGER.info("[Voxel] 预加载纹理: {}/{}", texCache.size(), model.materials.size());
+            XxsxBuilder.LOGGER.info("[Voxel] 预加载纹理: {}成功 {}失败 {}无贴图 / {}材质",
+                texLoadOk, texLoadFail, texSkipped, model.materials.size());
+        } else {
+            XxsxBuilder.LOGGER.warn("[Voxel] textureBaseDir=null，无法加载贴图，将使用材质漫反射色");
         }
 
         // 5. 对每个三角形进行体素化（表面体素化）
         // 使用保守光栅化：计算每个三角形的 AABB，遍历其中的体素测试包含关系
         int faceCount = model.faces.size();
+        int texHitCount = 0, texMissCount = 0;
         for (int fi = 0; fi < faceCount; fi++) {
             int[] tri = model.faces.get(fi);
             Vector3f v0 = scaledVerts.get(tri[0]);
@@ -120,8 +146,12 @@ public class Voxelizer {
             float[] color;
             // 尝试对面中心UV采样纹理
             color = sampleTexAtUV(model, matIdx, tri, texCache, matDiffuse);
-            if (color == null)
+            if (color != null) {
+                texHitCount++;
+            } else {
+                texMissCount++;
                 color = matIdx < matDiffuse.size() ? matDiffuse.get(matIdx) : new float[]{0.8f, 0.8f, 0.8f};
+            }
             // 法线着色
             float fnx = (v1.y - v0.y)*(v2.z - v0.z) - (v1.z - v0.z)*(v2.y - v0.y);
             float fny = (v1.z - v0.z)*(v2.x - v0.x) - (v1.x - v0.x)*(v2.z - v0.z);
@@ -144,7 +174,8 @@ public class Voxelizer {
             }
         }
 
-        XxsxBuilder.LOGGER.info("[Voxel] 体素化完成: {} 填充体素", grid.filledCount);
+        XxsxBuilder.LOGGER.info("[Voxel] 体素化完成: {} 填充体素, 纹理采样 {}/{} 命中",
+            grid.filledCount, texHitCount, texHitCount + texMissCount);
         return grid;
     }
 
@@ -225,6 +256,8 @@ public class Voxelizer {
             if (data == null || data.length < 18) return null;
 
             // TGA header
+            int imgType = data[2] & 0xFF;
+            if (imgType != 2) return null; // 只支持无压缩 RGB
             int w = ((data[13] & 0xFF) << 8) | (data[12] & 0xFF);
             int h = ((data[15] & 0xFF) << 8) | (data[14] & 0xFF);
             int bpp = data[16] & 0xFF;

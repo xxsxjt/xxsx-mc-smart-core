@@ -44,7 +44,23 @@ public class BlockColorMapper {
         add("red_wool",            153,  51,  51);
         add("black_wool",           51,  51,  51);
 
-        // 陶瓦不用——实际渲染色和理论值偏差大
+        // === 陶瓦 (Terracotta) — 真实纹理色，非名字色 ===
+        add("white_terracotta",      209, 177, 161); // 暖米色
+        add("light_gray_terracotta", 135, 107,  98); // 棕褐
+        add("gray_terracotta",        57,  41,  35); // 暗棕
+        add("black_terracotta",       37,  22,  16); // 近黑
+        add("brown_terracotta",       76,  50,  35); // 深棕
+        add("red_terracotta",        142,  60,  46); // 暗红
+        add("orange_terracotta",     159,  82,  36); // 暗橙
+        add("yellow_terracotta",     186, 133,  36); // 土黄
+        add("lime_terracotta",       103, 117,  53); // 橄榄绿
+        add("green_terracotta",       76,  82,  42); // 暗绿
+        add("cyan_terracotta",        87,  92,  92); // 青灰
+        add("light_blue_terracotta", 112, 108, 138); // 灰蓝
+        add("blue_terracotta",        76,  62,  92); // 暗紫
+        add("purple_terracotta",     122,  73,  88); // 紫褐
+        add("magenta_terracotta",    149,  87, 108); // 暗品红
+        add("pink_terracotta",       160,  77,  78); // 暗红粉
 
         // === 玻璃 (Glass) ===
         add("white_stained_glass",       255, 255, 255);
@@ -65,7 +81,47 @@ public class BlockColorMapper {
         add("black_stained_glass",       56,  56,  56);
 
         // 带釉陶瓦不用——图案复杂非纯色
-        // 总共 64 种纯色方块（4类 x 16色）
+
+        // === 暖白/米色系 ===
+        add("bone_block",             228, 221, 207); // 暖奶油
+        add("snow",                   253, 253, 253); // 纯白
+        add("smooth_quartz",          236, 229, 222); // 冷白
+        add("calcite",                224, 226, 221); // 灰白
+
+        // === 沙/土/棕系 ===
+        add("smooth_sandstone",       209, 200, 157); // 暖沙
+        add("end_stone",              221, 223, 165); // 淡黄绿
+        add("dripstone_block",        141, 104,  67); // 棕褐
+        add("mud_bricks",             157, 132, 109); // 浅棕
+        add("packed_mud",             144, 123,  98); // 中棕
+        add("mud",                     50,  42,  37); // 深棕
+
+        // === 紫系 ===
+        add("purpur_block",           169, 125, 165); // 暗紫
+        add("amethyst_block",         138, 102, 195); // 亮紫
+
+        // === 青/蓝绿系 ===
+        add("prismarine",              92, 131, 127); // 青绿
+        add("prismarine_bricks",       98, 155, 150); // 亮青
+        add("dark_prismarine",         56,  90,  75); // 暗青
+        add("warped_wart_block",       38, 120, 120); // 深青
+
+        // === 金/橙系 ===
+        add("glowstone",              181, 148,  83); // 暖金
+        add("hay_block",              180, 137,  33); // 金黄
+        add("honeycomb_block",        197, 139,  55); // 金橙
+        add("shroomlight",            245, 148,  69); // 亮橙
+
+        // === 暗色系 ===
+        add("nether_bricks",           45,  23,  27); // 暗红
+        add("nether_wart_block",      114,  32,  34); // 血红
+        add("obsidian",                16,  14,  25); // 近黑
+        add("tuff",                   108, 108, 102); // 中灰
+        add("dried_kelp_block",        37,  54,  32); // 暗绿
+        add("moss_block",              91, 118,  48); // 草绿
+        add("magma_block",            158,  81,  41); // 焦橙
+
+        // 总共 107 种纯色方块（5类x16 + 27建筑方块）
     }
 
     private static void add(String block, int r, int g, int b) {

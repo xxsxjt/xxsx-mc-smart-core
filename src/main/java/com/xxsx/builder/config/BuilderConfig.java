@@ -103,6 +103,11 @@ public class BuilderConfig {
         c.commandBlacklist = COMMAND_BLACKLIST.get();
         if (com.xxsx.builder.XxsxBuilder.getInstance() != null) {
             com.xxsx.builder.XxsxBuilder.getInstance().getConfig().apply(c);
+            // build_speed.txt 优先级高于 TOML（/ai build speed 持久化值）
+            int savedSpeed = com.xxsx.builder.command.AICommand.loadBuildSpeed();
+            if (savedSpeed > 0) {
+                com.xxsx.builder.XxsxBuilder.getInstance().getConfig().buildSpeed = savedSpeed;
+            }
         }
     }
 

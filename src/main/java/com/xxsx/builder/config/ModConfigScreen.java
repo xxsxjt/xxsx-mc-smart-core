@@ -46,7 +46,7 @@ public class ModConfigScreen extends Screen {
         int cx = this.width / 2;
         try { mul = Integer.parseInt(mulBox.getValue()); } catch (Exception e) { mul = 4; }
 
-        g.drawCenteredString(this.font, "§bxxsx的智能核心 §7v1.0.3", cx, 40, 0xFFFFFF);
+        g.drawCenteredString(this.font, "§bxxsx的智能核心 §7v1.0.4", cx, 40, 0xFFFFFF);
 
         g.drawCenteredString(this.font, "§7建筑高度设置（仅对新世界生效，需重启）", cx, 70, 0xAAAAAA);
         g.drawCenteredString(this.font, "§7原版地表上限: " + BASE + " 格", cx, 95, 0xCCCCCC);
