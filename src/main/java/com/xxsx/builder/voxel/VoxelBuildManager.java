@@ -122,6 +122,12 @@ public class VoxelBuildManager {
         });
     }
 
+    /** 是否有待处理的清除确认 */
+    public boolean hasClearPending(String playerName) {
+        BuildJob job = jobs.get(playerName);
+        return job != null && job.clearPending;
+    }
+
     /** y确认清除 */
     public boolean confirmClear(String playerName) {
         BuildJob job = jobs.get(playerName);

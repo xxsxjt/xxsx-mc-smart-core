@@ -286,12 +286,15 @@ public class AICommand {
             boolean hasCommands = processed.toUpperCase().contains("[CMD]");
 
             if (hasCommands) {
-                // 执行指令并反馈结果
                 if (!execResult.isEmpty())
                     source.sendSuccess(() -> ChatFold.foldExecResult(execResult), false);
-                // 继续下一轮
-                source.sendSuccess(() -> Component.literal("§7── /ai stop 可终止 ──"), false);
-                runAgent(sm, exec, session, "继续。如任务完成，不要加 [CMD]。", playerPos, anchorPos, source, depth + 1);
+                // 等清除确认完成后再继续
+                VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
+                if (vm != null && vm.hasClearPending(session.playerName)) {
+                    source.sendSuccess(() -> Component.literal("§7等待清除确认... (y/n)"), false);
+                    return; // 暂停 agent，等用户 y/n
+                }
+                runAgent(sm, exec, session, "继续", playerPos, anchorPos, source, depth + 1);
             }
             // 无指令 = AI 认为任务完成，自然结束
         }, source.getServer())
