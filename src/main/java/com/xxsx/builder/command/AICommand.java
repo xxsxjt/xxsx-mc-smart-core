@@ -252,8 +252,12 @@ public class AICommand {
                         model.vertices.addAll(o.vertices); model.normals.addAll(o.normals);
                         model.uvs.addAll(o.uvs); model.faces.addAll(o.faces);
                         model.faceMaterials.addAll(o.faceMaterials); model.materials.addAll(o.materials);
-                    } else
+                    } else {
                         model = new com.xxsx.builder.voxel.PMXParser().parse(p);
+                    }
+                    // 确保 textureBaseDir 已设置
+                    if (model.textureBaseDir == null && p.getParent() != null)
+                        model.textureBaseDir = p.getParent().toString();
                     float minX=999,minY=999,minZ=999,maxX=-999,maxY=-999,maxZ=-999;
                     for (var v : model.vertices) {
                         if(v.x<minX)minX=v.x; if(v.y<minY)minY=v.y; if(v.z<minZ)minZ=v.z;
@@ -371,6 +375,8 @@ public class AICommand {
             } else {
                 model = new com.xxsx.builder.voxel.PMXParser().parse(p);
             }
+            if (model.textureBaseDir == null && p.getParent() != null)
+                model.textureBaseDir = p.getParent().toString();
             float minX=999,minY=999,minZ=999,maxX=-999,maxY=-999,maxZ=-999;
             for (var v : model.vertices) {
                 if(v.x<minX)minX=v.x; if(v.y<minY)minY=v.y; if(v.z<minZ)minZ=v.z;
