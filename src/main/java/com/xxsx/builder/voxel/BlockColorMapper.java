@@ -111,6 +111,9 @@ public class BlockColorMapper {
         add("hay_block",              180, 137,  33); // 金黄
         add("honeycomb_block",        197, 139,  55); // 金橙
         add("shroomlight",            245, 148,  69); // 亮橙
+        add("gold_block",             255, 214,   0); // 纯金
+        add("raw_gold_block",         190, 133,  39); // 暗金
+        add("ochre_froglight",        245, 196,  96); // 浅金
 
         // === 暗色系 ===
         add("nether_bricks",           45,  23,  27); // 暗红
@@ -120,8 +123,37 @@ public class BlockColorMapper {
         add("dried_kelp_block",        37,  54,  32); // 暗绿
         add("moss_block",              91, 118,  48); // 草绿
         add("magma_block",            158,  81,  41); // 焦橙
+        add("red_nether_bricks",       70,   7,   9); // 深红
+        add("crying_obsidian",         32,  16,  60); // 暗紫
 
-        // 总共 107 种纯色方块（5类x16 + 27建筑方块）
+        // === 木色/肤色系（补肉色到棕色过渡）===
+        add("birch_planks",           196, 179, 123); // 浅米
+        add("oak_planks",             184, 148,  95); // 暖棕
+        add("jungle_planks",          167, 120,  85); // 中棕
+        add("spruce_planks",          115,  85,  49); // 深棕
+        add("dark_oak_planks",         61,  40,  18); // 暗棕
+        add("cherry_planks",          221, 183, 171); // 淡粉
+        add("mangrove_planks",        117,  54,  48); // 红棕
+        add("bamboo_planks",          227, 219, 122); // 黄绿
+        add("crimson_planks",         101,  48,  70); // 紫红
+        add("warped_planks",           43, 104,  99); // 青绿
+
+        // === 石/砖/砂岩系 ===
+        add("bricks",                 165, 108,  78); // 砖红
+        add("sandstone",              216, 202, 156); // 沙色
+        add("red_sandstone",          186,  99,  29); // 橙棕
+        add("terracotta",             152,  94,  67); // 素陶瓦
+        add("granite",                154, 105,  79); // 花岗岩
+        add("andesite",               138, 138, 135); // 安山岩
+        add("diorite",                198, 198, 198); // 闪长岩
+        add("basalt",                 116, 116, 122); // 玄武岩
+
+        // === 铜/金属系 ===
+        add("copper_block",           199, 123,  82); // 铜橙
+        add("raw_iron_block",         216, 175, 147); // 浅肉色
+        add("raw_copper_block",       186, 137,  94); // 铜棕
+
+        // 总共 135 种纯色方块
     }
 
     private static void add(String block, int r, int g, int b) {

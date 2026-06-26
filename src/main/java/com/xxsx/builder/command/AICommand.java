@@ -148,6 +148,9 @@ public class AICommand {
                                 .executes(ctx -> handleBuildCommand(
                                     StringArgumentType.getString(ctx, "path").trim(),
                                     ctx.getSource(), ctx.getSource().getTextName()))))
+                .then(Commands.literal("flyspeed")
+                        .then(Commands.argument("speed", StringArgumentType.word())
+                                .executes(ctx -> handleFlySpeed(ctx.getSource(), StringArgumentType.getString(ctx, "speed")))))
                 // 帮助
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
@@ -159,6 +162,7 @@ public class AICommand {
                         "§e/ai build stop — 停止建造\n" +
                         "§e/ai api/model — 切换模型\n" +
                         "§e/ai addmodel <url> <key> <模型名> [ctx长度] — 添加个人API\n" +
+                        "§e/ai flyspeed <数字> — 修改飞行速度(默认0.05, 建议0.1~1.0)\n" +
                         "§e/ai stop — 终止当前任务\n" +
                         "§e/ai clear — 清除对话历史"), false);
                     return 1;
@@ -402,6 +406,29 @@ public class AICommand {
             src.sendSuccess(() -> Component.literal("§a建造已停止"), false);
         else
             src.sendFailure(Component.literal("§c没有活跃的建造"));
+        return 1;
+    }
+
+    private static int handleFlySpeed(CommandSourceStack src, String speedStr) {
+        try {
+            float speed = Float.parseFloat(speedStr);
+            if (speed <= 0 || speed > 10) {
+                src.sendFailure(Component.literal("§c速度范围: 0.01 ~ 10 (默认0.05)"));
+                return 1;
+            }
+            var player = src.getPlayer();
+            if (player == null) {
+                src.sendFailure(Component.literal("§c仅玩家可用"));
+                return 1;
+            }
+            player.getAbilities().setFlyingSpeed(speed);
+            player.onUpdateAbilities();
+            src.sendSuccess(() -> Component.literal(
+                "§a飞行速度: " + String.format("%.2f", speed)
+                + " (默认0.05, 当前" + String.format("%.0f", speed / 0.05) + "倍)"), false);
+        } catch (NumberFormatException e) {
+            src.sendFailure(Component.literal("§c格式: /ai flyspeed <数字>  例: /ai flyspeed 0.2"));
+        }
         return 1;
     }
 

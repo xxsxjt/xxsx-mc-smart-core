@@ -191,12 +191,7 @@ public class Voxelizer {
             if (Math.abs(denom) < 1e-12) continue; // 退化三角形，跳过
             double invDenom = 1.0 / denom;
 
-            // 法线（用于简单光照，float 精度足够）
-            float fnx = (float)(e1y * e2z - e1z * e2y);
-            float fny = (float)(e1z * e2x - e1x * e2z);
-            float fnz = (float)(e1x * e2y - e1y * e2x);
-            float fnLen = (float) Math.sqrt(fnx * fnx + fny * fny + fnz * fnz);
-            float lightFactor = 0.6f + 0.4f * (fnLen > 0 ? Math.abs(fny) / fnLen : 0.5f);
+            // 纯材质预览，不模拟光照（MC 自带光照系统）
 
             // 遍历三角形 AABB 内的体素
             for (int vz = Math.max(0, triMinZ); vz <= Math.min(gridD - 1, triMaxZ); vz++) {
@@ -269,15 +264,14 @@ public class Voxelizer {
                             color = fallbackColor;
                             // 诊断：前3个回退
                             if (texMissCount <= 3 && grid.filledCount <= 3) {
-                                XxsxBuilder.LOGGER.info("[Voxel-diag] 回退色=({},{},{}) lightFactor={}",
+                                XxsxBuilder.LOGGER.info("[Voxel-diag] 回退色=({},{},{})",
                                     String.format("%.2f", fallbackColor[0]),
                                     String.format("%.2f", fallbackColor[1]),
-                                    String.format("%.2f", fallbackColor[2]),
-                                    String.format("%.2f", lightFactor));
+                                    String.format("%.2f", fallbackColor[2]));
                             }
                         }
 
-                        int packedColor = packColor(color, lightFactor);
+                        int packedColor = packColor(color);
                         grid.colors[vx][vy][vz] = packedColor;
                         grid.filledCount++;
                     }
@@ -299,20 +293,36 @@ public class Voxelizer {
         return Math.max(a, Math.max(b, c));
     }
 
-    /** 在指定 UV 坐标采样纹理（BGR 字节序，底部优先） */
+    /** 在指定 UV 坐标采样纹理。透明像素向中心偏移重试，避免回退到白色diffuse */
     private static float[] sampleTexAtUV(byte[] data, int w, int h, int bpp, int pixelStart,
                                           float u, float v) {
         try {
-            // UV → 像素坐标（底部优先）
-            int px = clamp((int) (u * (w - 1)), 0, w - 1);
-            int py = clamp((int) ((1f - v) * (h - 1)), 0, h - 1);
-            int bpr = bpp / 8;
-            int idx = pixelStart + (py * w + px) * bpr;
-            if (idx + bpr > data.length) return null;
-            int b = data[idx] & 0xFF;
-            int g = data[idx + 1] & 0xFF;
-            int r = data[idx + 2] & 0xFF;
-            return new float[]{r / 255f, g / 255f, b / 255f};
+            float cu = u, cv = v;
+            for (int retry = 0; retry < 8; retry++) {
+                int px = clamp((int) (cu * (w - 1)), 0, w - 1);
+                int py = clamp((int) ((1f - cv) * (h - 1)), 0, h - 1);
+                int bpr = bpp / 8;
+                int idx = pixelStart + (py * w + px) * bpr;
+                if (idx + bpr > data.length) return null;
+                if (bpp == 32) {
+                    int a = data[idx + 3] & 0xFF;
+                    if (a >= 128) { // 不透明，返回
+                        int b = data[idx] & 0xFF;
+                        int g = data[idx + 1] & 0xFF;
+                        int r = data[idx + 2] & 0xFF;
+                        return new float[]{r / 255f, g / 255f, b / 255f};
+                    }
+                } else {
+                    int b = data[idx] & 0xFF;
+                    int g = data[idx + 1] & 0xFF;
+                    int r = data[idx + 2] & 0xFF;
+                    return new float[]{r / 255f, g / 255f, b / 255f};
+                }
+                // 透明像素：向纹理中心(0.5,0.5)偏移一步重试
+                cu = cu + (0.5f - cu) * 0.3f;
+                cv = cv + (0.5f - cv) * 0.3f;
+            }
+            return null; // 8次都是透明，放弃
         } catch (Exception e) {
             return null;
         }
@@ -342,9 +352,9 @@ public class Voxelizer {
             int h = img.getHeight();
             if (w <= 0 || h <= 0) return null;
 
-            // 构建 TGA 兼容字节数组: 18字节伪头部 + BGR像素(底部优先)
-            int bpp = 24;
-            byte[] raw = new byte[18 + w * h * 3];
+            // 构建 TGA 兼容字节数组: 18字节伪头部 + BGRA像素(底部优先)，保留alpha用于透明检测
+            int bpp = 32;
+            byte[] raw = new byte[18 + w * h * 4];
             raw[2] = 2; // imgType = 无压缩 RGB
             raw[12] = (byte)(w & 0xFF);
             raw[13] = (byte)((w >> 8) & 0xFF);
@@ -353,14 +363,15 @@ public class Voxelizer {
             raw[16] = (byte)bpp;
             // raw[0] = 0 (ID length), raw[17] = 0 (descriptor)
 
-            // 逐像素读取，底部优先存储 BGR
+            // 逐像素读取，底部优先存储 BGRA
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    int rgb = img.getRGB(x, y);
-                    int idx = 18 + ((h - 1 - y) * w + x) * 3;
-                    raw[idx]     = (byte)(rgb & 0xFF);        // B
-                    raw[idx + 1] = (byte)((rgb >> 8) & 0xFF);  // G
-                    raw[idx + 2] = (byte)((rgb >> 16) & 0xFF); // R
+                    int argb = img.getRGB(x, y);
+                    int idx = 18 + ((h - 1 - y) * w + x) * 4;
+                    raw[idx]     = (byte)(argb & 0xFF);         // B
+                    raw[idx + 1] = (byte)((argb >> 8) & 0xFF);  // G
+                    raw[idx + 2] = (byte)((argb >> 16) & 0xFF); // R
+                    raw[idx + 3] = (byte)((argb >> 24) & 0xFF); // A
                 }
             }
             return raw;
