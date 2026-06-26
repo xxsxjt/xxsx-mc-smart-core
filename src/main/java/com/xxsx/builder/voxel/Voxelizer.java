@@ -82,7 +82,7 @@ public class Voxelizer {
             matDiffuse.add(mat.getDiffuseRGB());
         }
 
-        // 预加载所有纹理
+        // 预加载所有纹理（支持 TGA + PNG）
         Map<Integer, byte[]> texCache = new HashMap<>();
         int texLoadOk = 0, texLoadFail = 0, texSkipped = 0;
         if (model.textureBaseDir != null) {
@@ -95,20 +95,10 @@ public class Voxelizer {
                 java.nio.file.Path fp = java.nio.file.Paths.get(model.textureBaseDir, tp);
                 if (!texCache.containsKey(System.identityHashCode(mat))) {
                     try {
-                        byte[] d = java.nio.file.Files.readAllBytes(fp);
-                        // 快速校验 TGA 头部
-                        if (d.length >= 18) {
-                            int imgType = d[2] & 0xFF;
-                            int w = ((d[13] & 0xFF) << 8) | (d[12] & 0xFF);
-                            int h = ((d[15] & 0xFF) << 8) | (d[14] & 0xFF);
-                            if (imgType == 2 && w > 0 && h > 0) {
-                                texCache.put(System.identityHashCode(mat), d);
-                                texLoadOk++;
-                            } else {
-                                XxsxBuilder.LOGGER.warn("[Voxel] 纹理格式不支持: {} (type={}, {}x{})",
-                                    tp, imgType, w, h);
-                                texLoadFail++;
-                            }
+                        byte[] raw = loadTextureRGBA(fp);
+                        if (raw != null) {
+                            texCache.put(System.identityHashCode(mat), raw);
+                            texLoadOk++;
                         } else {
                             texLoadFail++;
                         }
@@ -177,6 +167,18 @@ public class Voxelizer {
                 texDataNull++;
                 if (matIdx < model.materials.size() && (model.materials.get(matIdx).texturePath == null || model.materials.get(matIdx).texturePath.isEmpty()))
                     noTexturePath++;
+            }
+
+            // 诊断：前5个面打印详细信息
+            if (fi < 5) {
+                String tp = matIdx < model.materials.size() ? model.materials.get(matIdx).texturePath : "?";
+                XxsxBuilder.LOGGER.info("[Voxel-diag] 面#{} mat#{} tex={} texData={} uv={} 回退色=({},{},{})",
+                    fi, matIdx, tp != null ? tp : "null",
+                    texData != null ? "有" + texW + "x" + texH : "无",
+                    uv0 != null ? "有" : "无",
+                    String.format("%.2f", fallbackColor[0]),
+                    String.format("%.2f", fallbackColor[1]),
+                    String.format("%.2f", fallbackColor[2]));
             }
 
             // 预计算 3D 重心坐标常量 (double 精度，避免大数值时 float 精度崩坏)
@@ -255,10 +257,24 @@ public class Voxelizer {
                             color = sampleTexAtUV(texData, texW, texH, texBpp, texPixelStart, iu, iv);
                             if (color != null) texHitCount++;
                             else texMissCount++;
+                            // 诊断：前3个命中/未命中
+                            if (texHitCount + texMissCount <= 3) {
+                                XxsxBuilder.LOGGER.info("[Voxel-diag] 采样 uv=({},{}) -> color={}",
+                                    String.format("%.3f", iu), String.format("%.3f", iv),
+                                    color != null ? String.format("(%.2f,%.2f,%.2f)", color[0], color[1], color[2]) : "null");
+                            }
                         }
                         if (color == null) {
                             if (uv0 == null || texData == null) texMissCount++;
                             color = fallbackColor;
+                            // 诊断：前3个回退
+                            if (texMissCount <= 3 && grid.filledCount <= 3) {
+                                XxsxBuilder.LOGGER.info("[Voxel-diag] 回退色=({},{},{}) lightFactor={}",
+                                    String.format("%.2f", fallbackColor[0]),
+                                    String.format("%.2f", fallbackColor[1]),
+                                    String.format("%.2f", fallbackColor[2]),
+                                    String.format("%.2f", lightFactor));
+                            }
                         }
 
                         int packedColor = packColor(color, lightFactor);
@@ -283,11 +299,11 @@ public class Voxelizer {
         return Math.max(a, Math.max(b, c));
     }
 
-    /** 在指定 UV 坐标采样 TGA 纹理（无压缩 RGB/BGRA） */
+    /** 在指定 UV 坐标采样纹理（BGR 字节序，底部优先） */
     private static float[] sampleTexAtUV(byte[] data, int w, int h, int bpp, int pixelStart,
                                           float u, float v) {
         try {
-            // UV → 像素坐标（TGA 底部优先）
+            // UV → 像素坐标（底部优先）
             int px = clamp((int) (u * (w - 1)), 0, w - 1);
             int py = clamp((int) ((1f - v) * (h - 1)), 0, h - 1);
             int bpr = bpp / 8;
@@ -298,6 +314,58 @@ public class Voxelizer {
             int r = data[idx + 2] & 0xFF;
             return new float[]{r / 255f, g / 255f, b / 255f};
         } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 加载纹理文件（支持 TGA + PNG），返回 TGA 兼容格式的字节数组 */
+    private static byte[] loadTextureRGBA(java.nio.file.Path fp) throws Exception {
+        String name = fp.getFileName().toString().toLowerCase();
+        if (name.endsWith(".tga")) {
+            byte[] d = java.nio.file.Files.readAllBytes(fp);
+            if (d.length < 18) return null;
+            int imgType = d[2] & 0xFF;
+            int w = ((d[13] & 0xFF) << 8) | (d[12] & 0xFF);
+            int h = ((d[15] & 0xFF) << 8) | (d[14] & 0xFF);
+            if (imgType == 2 && w > 0 && h > 0) return d; // 无压缩 RGB TGA，原样返回
+            XxsxBuilder.LOGGER.warn("[Voxel] TGA格式不支持: {} (type={})", name, imgType);
+            return null;
+        }
+        // PNG / 其他 → 用 ImageIO 解码，转为 TGA 兼容格式（BGR 底部优先）
+        try {
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(fp.toFile());
+            if (img == null) {
+                XxsxBuilder.LOGGER.warn("[Voxel] 无法解码图片: {}", name);
+                return null;
+            }
+            int w = img.getWidth();
+            int h = img.getHeight();
+            if (w <= 0 || h <= 0) return null;
+
+            // 构建 TGA 兼容字节数组: 18字节伪头部 + BGR像素(底部优先)
+            int bpp = 24;
+            byte[] raw = new byte[18 + w * h * 3];
+            raw[2] = 2; // imgType = 无压缩 RGB
+            raw[12] = (byte)(w & 0xFF);
+            raw[13] = (byte)((w >> 8) & 0xFF);
+            raw[14] = (byte)(h & 0xFF);
+            raw[15] = (byte)((h >> 8) & 0xFF);
+            raw[16] = (byte)bpp;
+            // raw[0] = 0 (ID length), raw[17] = 0 (descriptor)
+
+            // 逐像素读取，底部优先存储 BGR
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int rgb = img.getRGB(x, y);
+                    int idx = 18 + ((h - 1 - y) * w + x) * 3;
+                    raw[idx]     = (byte)(rgb & 0xFF);        // B
+                    raw[idx + 1] = (byte)((rgb >> 8) & 0xFF);  // G
+                    raw[idx + 2] = (byte)((rgb >> 16) & 0xFF); // R
+                }
+            }
+            return raw;
+        } catch (Exception e) {
+            XxsxBuilder.LOGGER.warn("[Voxel] PNG加载失败: {} → {}", name, e.getMessage());
             return null;
         }
     }

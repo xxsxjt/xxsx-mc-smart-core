@@ -7,7 +7,7 @@ xxsx的智能核心 — Minecraft 1.20.1 Forge AI 助手模组。
 | 功能 | 说明 |
 |------|------|
 | `/ai <消息>` | 自然语言 AI 对话，自动执行指令 |
-| `/ai build <PMX路径> [比例]` | 解析 PMX 模型生成体素建筑 |
+| `/ai build <PMX路径>` | 解析 PMX 模型 → 体素建筑，`/ai <倍数>` 确认比例 |
 | `/ai api/model` | 切换 AI 供应商和模型 |
 | `/ai addmodel` | 添加个人 API 密钥 |
 | `[CMD]` 标签 | AI 输出指令自动执行并反馈结果 |
@@ -24,12 +24,16 @@ xxsx的智能核心 — Minecraft 1.20.1 Forge AI 助手模组。
 3. 输入 `/ai 你好` 测试对话
 4. 输入 `/ai addmodel <API地址> <Key> <模型名>` 添加你自己的模型
 
-## 视觉功能（v1.0.0 预览实验版）
+## 视觉功能（v1.0.5）
 
-- **PMX 体素建筑**：读取 MMD 模型的顶点/面/材质颜色，通过表面体素化+法线着色转换为 Minecraft 彩色方块建筑
-- **CIELAB 颜色匹配**：RGB→LAB→80 种方块颜色数据库（混凝土/羊毛/陶瓦/玻璃/带釉陶瓦），CIE76 色差最小匹配
-- **异步构建**：ForkJoinPool 解析+体素化 → ServerTickEvent 分步放置（避免卡服）
-- 示例：`/ai build "C:\模型.pmx" 150`
+- **PMX 体素建筑**：解析 MMD 模型（PMX+OBJ）→ 逐体素 UV 纹理采样 + 法线着色 → Minecraft 彩色方块
+- **逐体素纹理采样**：3D 重心坐标反推 UV，每个体素独立采样纹理像素（旧版整面同色）
+- **超采样抗锯齿**：2×2×2 子采样点边缘平滑，大幅减少锯齿
+- **PNG + TGA 纹理**：自动识别格式，PNG 通过 ImageIO 转换
+- **CIELAB 颜色匹配**：107 种方块颜色数据库（混凝土/羊毛/陶瓦/玻璃/建筑方块），CIE76 色差最小匹配
+- **浮点倍数**：`/ai 2.5` 支持小数倍率精细控制
+- **异步构建**：ForkJoinPool 解析+体素化 → ServerTickEvent 分步放置
+- 示例：`/ai build "C:\模型.pmx"` → 输入 `/ai 3` 确认 3 倍
 
 ## 配置
 
@@ -47,8 +51,10 @@ context_max_tokens = 500000
 context_compression = "truncate"  # 或 "summarize"
 
 [build]
-default_scale = 150
-blocks_per_tick = 200
+ask_clear = true            # 建造前询问清除区域
+speed = -1                  # -1=使用 blocks_per_tick，或 /ai build speed 持久化
+blocks_per_tick = 1000      # 20000 方块/秒
+default_scale = 300
 ```
 
 ## 依赖
@@ -71,25 +77,26 @@ blocks_per_tick = 200
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
-## 当前状态 (2026-06-23)
+## 当前状态 (2026-06-26)
 
-v1.0.0 — 功能完整，可用于游戏内测试。
+v1.0.5 — 体素算法重写，支持 PNG 纹理，浮点倍数，脚底对齐。
 
 已实现：
 - `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
 - `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）
 - `[KNOWLEDGE]` 知识库（jar 内置 ftbquests/bloodmagic，外置可扩展）
 - `[CMD]` 指令自动执行，错误反馈给 AI
-- PMX 体素建筑（法线着色 + CIELAB 80色匹配 + 异步分步放置）
-- 模型切换 `/ai api` + `/ai model`（Agnes 内置 + Custom）
-- 个人 API `/ai addmodel <url> <key> <model> [上下文长度]`
-- 会话持久化（同玩家重连恢复）+ 上下文自动压缩
+- PMX 体素建筑：逐体素 UV 纹理采样 + 超采样抗锯齿 + CIELAB 107 色匹配
+- PNG + TGA 纹理自动识别加载
+- 浮点倍数 `/ai 2.5`，脚底对齐放置
+- `/ai build speed` 持久化速度控制
+- 模型切换 `/ai api` + `/ai model` + `/ai addmodel`
+- 会话持久化 + 上下文自动压缩
 - 聊天折叠显示（悬停全文/点击复制）
-- 独立日志 `logs/xxsx_builder.log`
 
 待优化：
-- PMX 纹理采样着色（目前仅材质色+法线明暗）
-- AI 可触发的配置修改接口完善
+- 多纹理混合（toon/sphere 贴图）
+- 更丰富的光照模型（环境光遮蔽）
 
 ## 作者
 
