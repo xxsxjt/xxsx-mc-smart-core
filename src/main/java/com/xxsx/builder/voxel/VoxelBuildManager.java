@@ -36,7 +36,7 @@ public class VoxelBuildManager {
     }
 
     /** 启动一个建筑任务 */
-    public void startBuild(String playerName, String filePath, int scale, CommandSourceStack source) {
+    public void startBuild(String playerName, String filePath, float scale, CommandSourceStack source) {
         // 检查是否已有任务
         if (jobs.containsKey(playerName)) {
             source.sendFailure(Component.literal("§c你已有正在执行的任务，使用 /ai stop 取消"));
@@ -199,11 +199,12 @@ public class VoxelBuildManager {
                 // === 清除区域 ===
                 if (config.buildAskClear && job.clearState == 0) {
                     job.clearState = 1; // → 询问
-                    final int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
-                    final int count = (hw*2+1) * (hh*2+1) * (hd*2+1);
+                    final int hw = grid.width/2, hd = grid.depth/2;
+                    final int clearW = hw*2+1, clearH = grid.height, clearD = hd*2+1;
+                    final int count = clearW * clearH * clearD;
                     job.clearTotal = count;
                     net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
-                        "§e清除 " + (hw*2+1) + "x" + (hh*2+1) + "x" + (hd*2+1) + " 区域(" + count + "方块)? ");
+                        "§e清除 " + clearW + "x" + clearH + "x" + clearD + " 区域(" + count + "方块)? ");
                     net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a[ 是(Y) ]");
                     yes.setStyle(yes.getStyle().withClickEvent(
                         new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/ai build y")));
@@ -219,13 +220,14 @@ public class VoxelBuildManager {
                 if (job.clearState == 2) {
                     // 分帧清除，和建造同速度
                     int cleared = 0;
-                    int hw = grid.width/2, hh = grid.height/2, hd = grid.depth/2;
+                    int hw = grid.width/2, hd = grid.depth/2;
+                    int clearW = hw*2+1, clearH = grid.height;
                     while (cleared < speed && job.clearIndex < job.clearTotal) {
                         int idx = job.clearIndex++;
-                        int dx = (idx % (hw*2+1)) - hw;
-                        int rem = idx / (hw*2+1);
-                        int dy = (rem % (hh*2+1)) - hh;
-                        int dz = (rem / (hh*2+1)) - hd;
+                        int dx = (idx % clearW) - hw;
+                        int rem = idx / clearW;
+                        int dy = rem % clearH;  // 脚底对齐：y=0=玩家Y起
+                        int dz = (rem / clearH) - hd;
                         try {
                             level.setBlock(center.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2); // flag2=无邻居更新
                             cleared++;
@@ -264,7 +266,7 @@ public class VoxelBuildManager {
                         if (block != null && block != Blocks.AIR) {
                             BlockPos target = center.offset(
                                     x - grid.width / 2,
-                                    y - grid.height / 2,
+                                    y,  // 脚底对齐：y=0=玩家Y，模型在玩家上方
                                     z - grid.depth / 2);
                             level.setBlock(target, block.defaultBlockState(), 3);
                         }

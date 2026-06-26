@@ -41,7 +41,7 @@ public class BuilderConfig {
     public static final ForgeConfigSpec.IntValue BUILD_SPEED =
             inner.comment("建造速度（每tick方块数，-1=使用默认blocks_per_tick）").defineInRange("build.speed", -1, -1, 10000);
     public static final ForgeConfigSpec.IntValue BLOCKS_PER_TICK =
-            inner.comment("每 tick 放置方块数（20tick=1秒，2000=40000方块/秒）").defineInRange("build.blocks_per_tick", 2000, 10, 10000);
+            inner.comment("每 tick 放置方块数（20tick=1秒，1000=20000方块/秒）").defineInRange("build.blocks_per_tick", 1000, 10, 10000);
     public static final ForgeConfigSpec.IntValue MAX_VERTICES =
             inner.comment("PMX 最大顶点数").defineInRange("build.max_vertices", 500000, 10000, 5000000);
     public static final ForgeConfigSpec.IntValue DEFAULT_SCALE =
@@ -70,7 +70,7 @@ public class BuilderConfig {
     public String knowledgePath = "config/xxsx_builder/knowledge";
     public boolean buildAskClear = true;
     public int buildSpeed = -1;  // -1=未设置, 用blocks_per_tick
-    public int blocksPerTick = 2000;
+    public int blocksPerTick = 1000;
     public int maxVertices = 500000;
     public int defaultScale = 300;
     public String commandBlacklist = "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on";

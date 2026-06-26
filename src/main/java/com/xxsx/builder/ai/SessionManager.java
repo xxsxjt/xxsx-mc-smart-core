@@ -92,6 +92,7 @@ public class SessionManager {
         if (url.isEmpty()) return "Agnes (内置)";
         if (url.contains("deepseek")) return "DeepSeek";
         if (url.contains("agnes")) return "Agnes";
+        if (url.contains("stepfun")) return "StepFun";
         return "Custom";
     }
 

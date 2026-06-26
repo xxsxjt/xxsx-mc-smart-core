@@ -4,7 +4,8 @@ import com.xxsx.builder.XxsxBuilder;
 import org.joml.Vector3f;
 import org.joml.Vector2f;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -31,10 +32,10 @@ public class Voxelizer {
     /**
      * 体素化 PMX 模型
      * @param model PMX 模型
-     * @param scale 目标大小（最大轴向的格子数）
+     * @param scale 目标大小（最大轴向的格子数），支持浮点精细控制
      * @return 体素网格
      */
-    public static VoxelGrid voxelize(PMXModel model, int scale) {
+    public static VoxelGrid voxelize(PMXModel model, float scale) {
         // 1. 计算包围盒
         float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
         float maxX = Float.MIN_VALUE, maxY = Float.MIN_VALUE, maxZ = Float.MIN_VALUE;
@@ -123,10 +124,10 @@ public class Voxelizer {
             XxsxBuilder.LOGGER.warn("[Voxel] textureBaseDir=null，无法加载贴图，将使用材质漫反射色");
         }
 
-        // 5. 对每个三角形进行体素化（表面体素化）
-        // 使用保守光栅化：计算每个三角形的 AABB，遍历其中的体素测试包含关系
+        // 5. 对每个三角形进行体素化（3D 重心坐标 + 逐体素 UV 插值 + 超采样抗锯齿）
         int faceCount = model.faces.size();
         int texHitCount = 0, texMissCount = 0;
+        int texDataOk = 0, texDataNull = 0, uvOk = 0, uvNull = 0, noTexturePath = 0;
         for (int fi = 0; fi < faceCount; fi++) {
             int[] tri = model.faces.get(fi);
             Vector3f v0 = scaledVerts.get(tri[0]);
@@ -134,91 +135,171 @@ public class Voxelizer {
             Vector3f v2 = scaledVerts.get(tri[2]);
 
             // 三角形的网格空间 AABB
-            int triMinX = clamp((int) Math.floor(Math.min(v0.x, Math.min(v1.x, v2.x))), 0, gridW - 1);
-            int triMinY = clamp((int) Math.floor(Math.min(v0.y, Math.min(v1.y, v2.y))), 0, gridH - 1);
-            int triMinZ = clamp((int) Math.floor(Math.min(v0.z, Math.min(v1.z, v2.z))), 0, gridD - 1);
-            int triMaxX = clamp((int) Math.ceil(Math.max(v0.x, Math.max(v1.x, v2.x))), 0, gridW - 1);
-            int triMaxY = clamp((int) Math.ceil(Math.max(v0.y, Math.max(v1.y, v2.y))), 0, gridH - 1);
-            int triMaxZ = clamp((int) Math.ceil(Math.max(v0.z, Math.max(v1.z, v2.z))), 0, gridD - 1);
+            int triMinX = clamp((int) Math.floor(min3(v0.x, v1.x, v2.x)), -1, gridW);
+            int triMinY = clamp((int) Math.floor(min3(v0.y, v1.y, v2.y)), -1, gridH);
+            int triMinZ = clamp((int) Math.floor(min3(v0.z, v1.z, v2.z)), -1, gridD);
+            int triMaxX = clamp((int) Math.ceil(max3(v0.x, v1.x, v2.x)), -1, gridW);
+            int triMaxY = clamp((int) Math.ceil(max3(v0.y, v1.y, v2.y)), -1, gridH);
+            int triMaxZ = clamp((int) Math.ceil(max3(v0.z, v1.z, v2.z)), -1, gridD);
 
-            // 颜色：优先纹理采样，回退材质diffuse
+            // 材质和纹理数据
             int matIdx = fi < model.faceMaterials.size() ? model.faceMaterials.get(fi) : 0;
-            float[] color;
-            // 尝试对面中心UV采样纹理
-            color = sampleTexAtUV(model, matIdx, tri, texCache, matDiffuse);
-            if (color != null) {
-                texHitCount++;
-            } else {
-                texMissCount++;
-                color = matIdx < matDiffuse.size() ? matDiffuse.get(matIdx) : new float[]{0.8f, 0.8f, 0.8f};
-            }
-            // 法线着色
-            float fnx = (v1.y - v0.y)*(v2.z - v0.z) - (v1.z - v0.z)*(v2.y - v0.y);
-            float fny = (v1.z - v0.z)*(v2.x - v0.x) - (v1.x - v0.x)*(v2.z - v0.z);
-            float fnz = (v1.x - v0.x)*(v2.y - v0.y) - (v1.y - v0.y)*(v2.x - v0.x);
-            float fnLen = (float)Math.sqrt(fnx*fnx + fny*fny + fnz*fnz);
-            float lightFactor = 0.6f + 0.4f * (fnLen > 0 ? Math.abs(fny) / fnLen : 0.5f); // 0.6~1.0 亮度变化
-            int packedColor = packColor(color, lightFactor);
+            float[] fallbackColor = matIdx < matDiffuse.size() ? matDiffuse.get(matIdx) : new float[]{0.8f, 0.8f, 0.8f};
+            byte[] texData = null;
+            Vector2f uv0 = null, uv1 = null, uv2 = null;
+            int texW = 0, texH = 0, texBpp = 0, texPixelStart = 0;
 
-            // 遍历三角形内的体素
-            for (int vz = triMinZ; vz <= triMaxZ; vz++) {
-                for (int vy = triMinY; vy <= triMaxY; vy++) {
-                    for (int vx = triMinX; vx <= triMaxX; vx++) {
-                        float cx = vx + 0.5f, cy = vy + 0.5f, cz = vz + 0.5f;
-                        if (grid.colors[vx][vy][vz] == 0 && pointInTriangle(cx, cy, cz, v0, v1, v2)) {
-                            grid.colors[vx][vy][vz] = packedColor;
-                            grid.filledCount++;
+            if (matIdx < model.materials.size()) {
+                texData = texCache.get(System.identityHashCode(model.materials.get(matIdx)));
+                if (texData != null && texData.length >= 18) {
+                    int imgType = texData[2] & 0xFF;
+                    texW = ((texData[13] & 0xFF) << 8) | (texData[12] & 0xFF);
+                    texH = ((texData[15] & 0xFF) << 8) | (texData[14] & 0xFF);
+                    texBpp = texData[16] & 0xFF;
+                    texPixelStart = 18 + (texData[0] & 0xFF);
+                    if (imgType != 2 || texW <= 0 || texH <= 0 || (texBpp != 24 && texBpp != 32)) {
+                        texData = null; // 格式不支持
+                    }
+                } else {
+                    texData = null;
+                }
+            }
+            if (texData != null && tri[0] < model.uvs.size() && tri[1] < model.uvs.size() && tri[2] < model.uvs.size()) {
+                uv0 = model.uvs.get(tri[0]);
+                uv1 = model.uvs.get(tri[1]);
+                uv2 = model.uvs.get(tri[2]);
+                uvOk++;
+            } else {
+                uvNull++;
+            }
+            if (texData != null) texDataOk++;
+            else {
+                texDataNull++;
+                if (matIdx < model.materials.size() && (model.materials.get(matIdx).texturePath == null || model.materials.get(matIdx).texturePath.isEmpty()))
+                    noTexturePath++;
+            }
+
+            // 预计算 3D 重心坐标常量 (double 精度，避免大数值时 float 精度崩坏)
+            double e1x = v1.x - v0.x, e1y = v1.y - v0.y, e1z = v1.z - v0.z;
+            double e2x = v2.x - v0.x, e2y = v2.y - v0.y, e2z = v2.z - v0.z;
+            double d00 = e1x * e1x + e1y * e1y + e1z * e1z;
+            double d01 = e1x * e2x + e1y * e2y + e1z * e2z;
+            double d11 = e2x * e2x + e2y * e2y + e2z * e2z;
+            double denom = d00 * d11 - d01 * d01;
+            if (Math.abs(denom) < 1e-12) continue; // 退化三角形，跳过
+            double invDenom = 1.0 / denom;
+
+            // 法线（用于简单光照，float 精度足够）
+            float fnx = (float)(e1y * e2z - e1z * e2y);
+            float fny = (float)(e1z * e2x - e1x * e2z);
+            float fnz = (float)(e1x * e2y - e1y * e2x);
+            float fnLen = (float) Math.sqrt(fnx * fnx + fny * fny + fnz * fnz);
+            float lightFactor = 0.6f + 0.4f * (fnLen > 0 ? Math.abs(fny) / fnLen : 0.5f);
+
+            // 遍历三角形 AABB 内的体素
+            for (int vz = Math.max(0, triMinZ); vz <= Math.min(gridD - 1, triMaxZ); vz++) {
+                for (int vy = Math.max(0, triMinY); vy <= Math.min(gridH - 1, triMaxY); vy++) {
+                    for (int vx = Math.max(0, triMinX); vx <= Math.min(gridW - 1, triMaxX); vx++) {
+                        if (grid.colors[vx][vy][vz] != 0) continue; // 已被其他三角形填充
+
+                        // 快速路径：体素中心点在三角形内 (double 精度)
+                        double cx = vx + 0.5, cy = vy + 0.5, cz = vz + 0.5;
+                        double epx = cx - v0.x, epy = cy - v0.y, epz = cz - v0.z;
+                        double d20 = epx * e1x + epy * e1y + epz * e1z;
+                        double d21 = epx * e2x + epy * e2y + epz * e2z;
+                        double bv = (d11 * d20 - d01 * d21) * invDenom;
+                        double bw = (d00 * d21 - d01 * d20) * invDenom;
+
+                        boolean inside = (bv >= -1e-6 && bw >= -1e-6 && bv + bw <= 1.0 + 1e-6);
+
+                        // 超采样抗锯齿：中心不在三角形内时，检测 2×2×2 子采样点
+                        if (!inside) {
+                            int hits = 0;
+                            final int SS = 2;
+                            double sumV = 0, sumW = 0;
+                            for (int sz = 0; sz < SS && hits < SS * SS; sz++) {
+                                for (int sy = 0; sy < SS; sy++) {
+                                    for (int sx = 0; sx < SS; sx++) {
+                                        double spx = vx + (sx + 0.5) / SS;
+                                        double spy = vy + (sy + 0.5) / SS;
+                                        double spz = vz + (sz + 0.5) / SS;
+                                        double sepx = spx - v0.x, sepy = spy - v0.y, sepz = spz - v0.z;
+                                        double sd20 = sepx * e1x + sepy * e1y + sepz * e1z;
+                                        double sd21 = sepx * e2x + sepy * e2y + sepz * e2z;
+                                        double sv = (d11 * sd20 - d01 * sd21) * invDenom;
+                                        double sw = (d00 * sd21 - d01 * sd20) * invDenom;
+                                        if (sv >= -1e-6 && sw >= -1e-6 && sv + sw <= 1.0 + 1e-6) {
+                                            hits++;
+                                            sumV += sv;
+                                            sumW += sw;
+                                        }
+                                    }
+                                }
+                            }
+                            // 至少一半子采样命中才算覆盖
+                            if (hits >= SS * SS * SS / 2) {
+                                inside = true;
+                                bv = sumV / hits;
+                                bw = sumW / hits;
+                            }
                         }
+
+                        if (!inside) continue;
+
+                        // 逐体素 UV 插值 + 纹理采样
+                        float[] color = null;
+                        if (uv0 != null && texData != null) {
+                            double bu = 1.0 - bv - bw;
+                            float iu = (float)(bu * uv0.x + bv * uv1.x + bw * uv2.x);
+                            float iv = (float)(bu * uv0.y + bv * uv1.y + bw * uv2.y);
+                            color = sampleTexAtUV(texData, texW, texH, texBpp, texPixelStart, iu, iv);
+                            if (color != null) texHitCount++;
+                            else texMissCount++;
+                        }
+                        if (color == null) {
+                            if (uv0 == null || texData == null) texMissCount++;
+                            color = fallbackColor;
+                        }
+
+                        int packedColor = packColor(color, lightFactor);
+                        grid.colors[vx][vy][vz] = packedColor;
+                        grid.filledCount++;
                     }
                 }
             }
         }
 
-        XxsxBuilder.LOGGER.info("[Voxel] 体素化完成: {} 填充体素, 纹理采样 {}/{} 命中",
-            grid.filledCount, texHitCount, texHitCount + texMissCount);
+        XxsxBuilder.LOGGER.info("[Voxel] 体素化完成: {} 填充体素, 纹理采样 {}/{} 命中 | 纹理:{}有 {}无({}无路径) UV:{}有 {}无",
+            grid.filledCount, texHitCount, texHitCount + texMissCount,
+            texDataOk, texDataNull, noTexturePath, uvOk, uvNull);
         return grid;
     }
 
-    /** 判断点是否在三角形内（3D 投影到 2D） */
-    private static boolean pointInTriangle(float px, float py, float pz,
-                                            Vector3f v0, Vector3f v1, Vector3f v2) {
-        // 计算法线，选择投影轴（法线绝对值最大的分量）
-        float nx = (v1.y - v0.y) * (v2.z - v0.z) - (v1.z - v0.z) * (v2.y - v0.y);
-        float ny = (v1.z - v0.z) * (v2.x - v0.x) - (v1.x - v0.x) * (v2.z - v0.z);
-        float nz = (v1.x - v0.x) * (v2.y - v0.y) - (v1.y - v0.y) * (v2.x - v0.x);
+    private static float min3(float a, float b, float c) {
+        return Math.min(a, Math.min(b, c));
+    }
 
-        // 选择法线分量最大的轴作为投影平面
-        float ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
+    private static float max3(float a, float b, float c) {
+        return Math.max(a, Math.max(b, c));
+    }
 
-        float u0, u1, u2, up;
-        float vv0, vv1, vv2, vp;
-
-        if (ax >= ay && ax >= az) {
-            // YZ 平面投影
-            u0 = v0.y; u1 = v1.y; u2 = v2.y; up = py;
-            vv0 = v0.z; vv1 = v1.z; vv2 = v2.z; vp = pz;
-        } else if (ay >= ax && ay >= az) {
-            // XZ 平面投影
-            u0 = v0.x; u1 = v1.x; u2 = v2.x; up = px;
-            vv0 = v0.z; vv1 = v1.z; vv2 = v2.z; vp = pz;
-        } else {
-            // XY 平面投影
-            u0 = v0.x; u1 = v1.x; u2 = v2.x; up = px;
-            vv0 = v0.y; vv1 = v1.y; vv2 = v2.y; vp = py;
+    /** 在指定 UV 坐标采样 TGA 纹理（无压缩 RGB/BGRA） */
+    private static float[] sampleTexAtUV(byte[] data, int w, int h, int bpp, int pixelStart,
+                                          float u, float v) {
+        try {
+            // UV → 像素坐标（TGA 底部优先）
+            int px = clamp((int) (u * (w - 1)), 0, w - 1);
+            int py = clamp((int) ((1f - v) * (h - 1)), 0, h - 1);
+            int bpr = bpp / 8;
+            int idx = pixelStart + (py * w + px) * bpr;
+            if (idx + bpr > data.length) return null;
+            int b = data[idx] & 0xFF;
+            int g = data[idx + 1] & 0xFF;
+            int r = data[idx + 2] & 0xFF;
+            return new float[]{r / 255f, g / 255f, b / 255f};
+        } catch (Exception e) {
+            return null;
         }
-
-        // 重心坐标系测试
-        double du0 = up - u0, du1 = u1 - u0, du2 = u2 - u0;
-        double dv0 = vp - vv0, dv1 = vv1 - vv0, dv2 = vv2 - vv0;
-        double dot00 = du1 * du1 + dv1 * dv1;
-        double dot01 = du1 * du2 + dv1 * dv2;
-        double dot02 = du1 * du0 + dv1 * dv0;
-        double dot11 = du2 * du2 + dv2 * dv2;
-        double dot12 = du2 * du0 + dv2 * dv0;
-        double inv = 1.0 / (dot00 * dot11 - dot01 * dot01);
-        double u = (dot11 * dot02 - dot01 * dot12) * inv;
-        double v = (dot00 * dot12 - dot01 * dot02) * inv;
-        return (u >= 0) && (v >= 0) && (u + v < 1);
     }
 
     private static int packColor(float[] rgb) {
@@ -245,94 +326,4 @@ public class Voxelizer {
         return Math.max(min, Math.min(max, v));
     }
 
-    /** 在三角形面中心 UV 采样纹理颜色 */
-    private static float[] sampleTexAtUV(PMXModel model, int matIdx, int[] tri,
-                                          Map<Integer, byte[]> texCache, List<float[]> fallback) {
-        try {
-            if (matIdx >= model.materials.size()) return null;
-            PMXModel.PMXMaterial mat = model.materials.get(matIdx);
-            if (mat.texturePath == null || mat.texturePath.isEmpty()) return null;
-            byte[] data = texCache.get(System.identityHashCode(mat));
-            if (data == null || data.length < 18) return null;
-
-            // TGA header
-            int imgType = data[2] & 0xFF;
-            if (imgType != 2) return null; // 只支持无压缩 RGB
-            int w = ((data[13] & 0xFF) << 8) | (data[12] & 0xFF);
-            int h = ((data[15] & 0xFF) << 8) | (data[14] & 0xFF);
-            int bpp = data[16] & 0xFF;
-            if (w <= 0 || h <= 0 || (bpp != 24 && bpp != 32)) return null;
-            int pixelStart = 18 + (data[0] & 0xFF);
-
-            // 计算三角形中心 UV
-            if (tri[0] >= model.uvs.size() || tri[1] >= model.uvs.size() || tri[2] >= model.uvs.size())
-                return null;
-            org.joml.Vector2f uv0 = model.uvs.get(tri[0]);
-            org.joml.Vector2f uv1 = model.uvs.get(tri[1]);
-            org.joml.Vector2f uv2 = model.uvs.get(tri[2]);
-            float cu = (uv0.x + uv1.x + uv2.x) / 3f;
-            float cv = (uv0.y + uv1.y + uv2.y) / 3f;
-
-            // UV → 像素坐标（TGA 底部优先）
-            int px = clamp((int)(cu * (w - 1)), 0, w - 1);
-            int py = clamp((int)((1f - cv) * (h - 1)), 0, h - 1); // TGA bottom-up
-            int bpr = bpp / 8;
-            int idx = pixelStart + (py * w + px) * bpr;
-            if (idx + bpr > data.length) return null;
-
-            int b = data[idx] & 0xFF;
-            int g = data[idx + 1] & 0xFF;
-            int r = data[idx + 2] & 0xFF;
-            return new float[]{r / 255f, g / 255f, b / 255f};
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /** 读取纹理平均色。TGA 无压缩格式。 */
-    private static float[] readTextureAverage(String texPath) {
-        if (texPath == null || texPath.isEmpty()) return null;
-        try {
-            // 从 PMX 模型的纹理路径读取
-            // texPath 可能是 Unicode 路径
-            java.nio.file.Path p = java.nio.file.Paths.get(texPath.replace("\\", "/"));
-            if (!java.nio.file.Files.exists(p)) return null;
-
-            byte[] data = java.nio.file.Files.readAllBytes(p);
-            if (data.length < 18) return null;
-
-            // TGA header: width at bytes 12-13, height at 14-15, bpp at 16
-            int w = ((data[13] & 0xFF) << 8) | (data[12] & 0xFF);
-            int h = ((data[15] & 0xFF) << 8) | (data[14] & 0xFF);
-            int bpp = data[16] & 0xFF;
-            int imgType = data[2] & 0xFF;
-            if (w <= 0 || h <= 0 || (bpp != 24 && bpp != 32)) return null;
-
-            int pixelStart = 18 + (data[0] & 0xFF);
-            if (imgType != 2) return null; // 只支持无压缩 RGB
-
-            int bytesPerPixel = bpp / 8;
-            long sumR = 0, sumG = 0, sumB = 0;
-            int count = 0;
-            int totalPixels = w * h;
-            // 采样：从中间区域均匀取点（TGA 底部先存，跳过头尾）
-            int skip = Math.max(1, totalPixels / 5000); // 最多 5000 个采样点
-            int startOffset = totalPixels / 10; // 跳过底部 10%（可能是黑边）
-            int endOffset = totalPixels - startOffset; // 跳过顶部 10%
-            for (int i = startOffset; i < endOffset && count < 5000; i += skip) {
-                int idx = pixelStart + (i * bytesPerPixel);
-                if (idx + bytesPerPixel > data.length) break;
-                int b = data[idx] & 0xFF;
-                int g = data[idx + 1] & 0xFF;
-                int r = data[idx + 2] & 0xFF;
-                sumR += r; sumG += g; sumB += b;
-                count++;
-            }
-
-            if (count == 0) return null;
-            return new float[]{sumR / (255f * count), sumG / (255f * count), sumB / (255f * count)};
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }

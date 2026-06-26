@@ -78,11 +78,19 @@ public class AICommand {
                 // addmodel 子命令
                 .then(Commands.literal("addmodel")
                         .executes(ctx -> {
-                            var pc = PlayerConfig.get(ctx.getSource().getTextName());
-                            ctx.getSource().sendSuccess(() -> Component.literal(pc.hasCustomApi()
-                                ? "§e你的模型: " + pc.apiUrl + " | " + pc.apiModel + " | ctx="
-                                    + (pc.contextMaxTokens > 0 ? pc.contextMaxTokens : "默认")
-                                : "§e未添加个人模型\n§7/ai addmodel <地址> <Key> <模型名> [上下文长度]"), false);
+                            ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§b=== API 供应商 ===\n" +
+                                "§e内置: Agnes | DeepSeek | StepFun\n" +
+                                "§7切换: /ai api <名称>  选模型: /ai model <名称>\n" +
+                                "\n" +
+                                "§b=== 添加自定义 API ===\n" +
+                                "§7方式1（推荐）: 编辑配置文件\n" +
+                                "§7  config/xxsx_builder-common.toml\n" +
+                                "§7  改 ai.provider_url / ai.provider_key / ai.provider_model\n" +
+                                "§7  然后重进世界即可生效\n" +
+                                "§7方式2: /ai addmodel <地址> <Key> <模型名> [上下文长度]\n" +
+                                "§7  例: /ai addmodel https://api.xxx.com sk-xxx my-model 70000\n" +
+                                "§7  (聊天框字符限制，长Key建议用方式1)"), false);
                             return 1;
                         })
                         .then(Commands.argument("url", StringArgumentType.string())
@@ -102,7 +110,8 @@ public class AICommand {
                                                             XxsxBuilder.getInstance().getSessionManager().reloadProvider();
                                                             ctx.getSource().sendSuccess(() -> Component.literal(
                                                                 "§a已添加: " + model + " | 上下文="
-                                                                + (finalTokens > 0 ? finalTokens : "默认")), false);
+                                                                + (finalTokens > 0 ? finalTokens : "默认")
+                                                                + "\n§7提示: 长Key建议直接编辑 config/xxsx_builder-common.toml"), false);
                                                             return 1;
                                                         }))
                                                 .executes(ctx -> {
@@ -112,7 +121,8 @@ public class AICommand {
                                                     PlayerConfig.set(ctx.getSource().getTextName(), url, key, model, 0);
                                                     XxsxBuilder.getInstance().getSessionManager().reloadProvider();
                                                     ctx.getSource().sendSuccess(() ->
-                                                        Component.literal("§a已添加: " + model), false);
+                                                        Component.literal("§a已添加: " + model
+                                                        + "\n§7提示: 长Key建议直接编辑 config/xxsx_builder-common.toml"), false);
                                                     return 1;
                                                 })))))
                 .then(Commands.literal("build")
@@ -143,7 +153,7 @@ public class AICommand {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§e/ai <消息> — AI 对话\n" +
                         "§e/ai build <路径> — 解析PMX模型\n" +
-                        "§6/ai <数字> — 输入建造倍数(如 /ai 3)\n" +
+                        "§6/ai <数字> — 输入建造倍数(如 /ai 3, 支持小数 2.5)\n" +
                         "§e/ai build y/n — 确认/跳过清除\n" +
                         "§e/ai build speed <N> — 调速\n" +
                         "§e/ai build stop — 停止建造\n" +
@@ -180,14 +190,19 @@ public class AICommand {
         }
         // 数字输入 → build 倍数确认（不匹配则忽略，不发AI）
         try {
-            int multiplier = Integer.parseInt(input);
+            float multiplier = Float.parseFloat(input);
+            if (multiplier <= 0 || multiplier > 100) {
+                source.sendFailure(Component.literal("§c倍数范围: 0.5 ~ 100"));
+                return 1;
+            }
             ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
             if (session.pendingBuildPath != null) {
                 String path = session.pendingBuildPath;
-                int actualScale = session.pendingBuildBaseScale * multiplier;
+                float actualScale = session.pendingBuildBaseScale * multiplier;
                 session.pendingBuildPath = null;
+                String mulStr = multiplier == (int)multiplier ? String.valueOf((int)multiplier) : String.format("%.1f", multiplier);
                 source.sendSuccess(() -> Component.literal(
-                    "§e倍数 " + multiplier + "x → 实际比例 " + actualScale), false);
+                    "§e倍数 " + mulStr + "x → 实际比例 " + Math.round(actualScale)), false);
                 VoxelBuildManager m = XxsxBuilder.getInstance().getBuildManager();
                 if (m != null) {
                     m.startBuild(playerName, path, actualScale, source);
@@ -349,10 +364,12 @@ public class AICommand {
 
     private static void saveBuildSpeed(int spd) {
         try {
-            java.nio.file.Files.writeString(
-                java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt"),
-                String.valueOf(spd));
-        } catch (Exception ignored) {}
+            var p = java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt");
+            java.nio.file.Files.createDirectories(p.getParent());
+            java.nio.file.Files.writeString(p, String.valueOf(spd));
+        } catch (Exception e) {
+            XxsxBuilder.LOGGER.warn("[Build] 保存速度失败: {}", e.getMessage());
+        }
     }
 
     public static int loadBuildSpeed() {
@@ -437,7 +454,7 @@ public class AICommand {
                 "§71x大小: " + w1 + "x" + h1 + "x" + d1 + " 方块"
                 + " | 建议倍数1-10 (如3=" + (w1*3) + "x" + (h1*3) + "x" + (d1*3) + ")"), false);
             src.sendSuccess(() -> Component.literal(
-                "§6输入倍数: /ai 3 (数字前加/ai) | §7调速: /ai build speed <数字>\n" +
+                "§6输入倍数: /ai 3 (支持小数如 1.5 2.5) | §7调速: /ai build speed <数字>\n" +
                 "§7默认1000/tick, 大模型可设500+防卡顿, 小模型可设5000+加速"), false);
 
             // 存待确认状态

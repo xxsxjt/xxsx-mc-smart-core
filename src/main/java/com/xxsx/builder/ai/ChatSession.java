@@ -17,7 +17,7 @@ public class ChatSession {
     private Runnable confirmAction;
     private CompletableFuture<?> pendingFuture;
     public String pendingBuildPath = null;
-    public int pendingBuildBaseScale = 150;
+    public float pendingBuildBaseScale = 150f;
     public int pendingBuildSpeed = -1; // -1=未指定, 用配置默认值
     private static final int MIN_KEEP_RECENT = 8;
 
