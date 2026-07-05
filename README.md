@@ -106,6 +106,7 @@ xxsx_builder/
 ├── forge-1.20.1/          # Forge 1.20.1 独立子工程
 ├── neoforge-1.21.11/      # NeoForge 1.21.11 独立子工程
 ├── neoforge-26.2/         # NeoForge 26.2 独立子工程
+├── release-assets/        # GitHub Release 用的已验证 jar
 └── .github/workflows/     # GitHub Actions 发布流水线
 ```
 
@@ -118,7 +119,7 @@ xxsx_builder/
 ### 发布方式
 
 - GitHub `v*` tag 自动触发 `.github/workflows/release.yml`，用于完整发布矩阵
-- GitHub `neoforge-v*` tag 自动触发 `.github/workflows/release-neoforge.yml`，仅发布 NeoForge 1.21.11 / 26.2 客户端 jar
+- GitHub `neoforge-v*` tag 自动触发 `.github/workflows/release-neoforge.yml`，从 `release-assets/<tag>/` 上传已本地构建验证的 NeoForge 1.21.11 / 26.2 客户端 jar
 - 完整发布 workflow 分三套 JDK 构建：
   - Forge 1.20.1 → JDK 17
   - NeoForge 1.21.11 → JDK 21
