@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[3,)"
+license="AGPL-3.0"
+
+[[mods]]
+modId="xxsx_builder"
+version="1.1.0"
+displayName="xxsx Smart Core"
+logoFile="logo.png"
+description='''
+xxsx MC Smart Core - Minecraft AI Assistant Mod.
+Natural language game control, AI autonomous command execution, PMX voxel building, knowledge base system.
+'''
+authors="xxsx"
+
+[[dependencies.xxsx_builder]]
+modId="neoforge"
+type="required"
+versionRange="[26.2.0.7-beta,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.xxsx_builder]]
+modId="minecraft"
+type="required"
+versionRange="[26.2]"
+ordering="NONE"
+side="BOTH"

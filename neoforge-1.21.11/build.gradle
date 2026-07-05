@@ -1,0 +1,51 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+version = '1.1.0'
+group = 'com.xxsx.builder'
+base.archivesName = 'xxsx-builder-neoforge-1.21.11'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = "21.11.42"
+
+    runs {
+        configureEach {
+            client()
+            server()
+        }
+    }
+
+    mods {
+        xxsx_builder {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+sourceSets.main.java.srcDirs = ['src/main/java', '../common/src/main/java']
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title"     : "xxsx_builder",
+            "Specification-Vendor"    : "xxsx",
+            "Specification-Version"   : "1",
+            "Implementation-Title"    : project.name,
+            "Implementation-Version"  : project.jar.archiveVersion,
+            "Implementation-Vendor"   : "xxsx",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
