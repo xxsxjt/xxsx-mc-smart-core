@@ -5,11 +5,12 @@ license="AGPL-3.0"
 [[mods]]
 modId="xxsx_builder"
 version="1.1.0"
-displayName="xxsx Smart Core"
+displayName="xxsx Client Builder Assistant"
 logoFile="logo.png"
 description='''
-xxsx MC Smart Core - Minecraft AI Assistant Mod.
-Natural language game control, AI autonomous command execution, PMX voxel building, knowledge base system.
+xxsx Client Builder Assistant.
+Client-side portable building helper for local client and singleplayer integrated server use.
+Dedicated server installation has no effect.
 '''
 authors="xxsx"
 
@@ -18,11 +19,11 @@ modId="neoforge"
 type="required"
 versionRange="[26.2.0.7-beta,)"
 ordering="NONE"
-side="BOTH"
+side="CLIENT"
 
 [[dependencies.xxsx_builder]]
 modId="minecraft"
 type="required"
 versionRange="[26.2]"
 ordering="NONE"
-side="BOTH"
+side="CLIENT"

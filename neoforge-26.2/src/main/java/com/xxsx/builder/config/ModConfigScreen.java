@@ -188,7 +188,7 @@ public class ModConfigScreen extends Screen {
 
         g.fill(0, 0, this.width, this.height, 0xD0101018);
         drawCenteredStr(g, "xxsx 的智能核心", cx, 10, 0xFFFFFFFF);
-        drawCenteredStr(g, "[xxsx的智能核心] v1.0.5 已装载 - NeoForge 26.2", cx, 22, 0xFFD8F4FF);
+        drawCenteredStr(g, "[xxsx的智能核心] v1.1.0 已装载 - NeoForge 26.2", cx, 22, 0xFFD8F4FF);
         drawCenteredStr(g, "启动配置界面：先设置 API，再用 /ai 与智能核心对话", cx, 34, 0xFFAAB6C2);
 
         int worldTop = getWorldTop();
@@ -197,8 +197,8 @@ public class ModConfigScreen extends Screen {
         g.fill(panelLeft, worldTop, panelLeft + panelW, worldTop + 42, 0x24FFFFFF);
         g.outline(panelLeft, worldTop, panelW, 42, 0x28FFFFFF);
         drawCenteredStr(g, "世界高度", cx, worldTop + 4, 0xFFFFFF55);
-        drawStr(g, "原版地表 " + BASE + " -> 高度 = " + BASE + " x 倍数", panelLeft + 4, worldTop + 14, 0xFFAAAAAA);
-        drawStr(g, "倍数 " + mul + "x  = 实际 " + (BASE * mul) + " 格", panelLeft + panelW / 2 + 34, worldTop + 27, 0xFFFFFFFF);
+        drawStr(g, "注：-64，+320", panelLeft - 4, worldTop + 14, 0xFFAAAAAA);
+        drawStr(g, "倍数 " + mul + "x  = 实际 " + (BASE * mul) + " 格", panelLeft + panelW / 2 + 58, worldTop + 27, 0xFFFFFFFF);
         int bl = panelLeft + 30;
         int br = panelLeft + panelW - 30;
         int by = worldTop + 36;

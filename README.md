@@ -81,6 +81,49 @@ default_scale = 300
 
 v1.1.0 — 多版本发布同步更新（Forge 1.20.1 / NeoForge 1.21.11 / NeoForge 26.2）。
 
+### 支持版本 / 发布矩阵
+
+| 模块目录 | Loader | 目标版本 | JDK | 产物名 |
+|---------|--------|----------|-----|--------|
+| `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | 17 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
+| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | 21 | `xxsx-builder-neoforge-1.21.11-1.1.0.jar` |
+| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | 25 | `xxsx-builder-neoforge-26.2-1.1.0.jar` |
+
+### 项目结构
+
+```text
+xxsx_builder/
+├── common/                # 共享 Java 逻辑
+├── forge-1.20.1/          # Forge 1.20.1 独立子工程
+├── neoforge-1.21.11/      # NeoForge 1.21.11 独立子工程
+├── neoforge-26.2/         # NeoForge 26.2 独立子工程
+└── .github/workflows/     # GitHub Actions 发布流水线
+```
+
+当前实践采用 **common + 独立版本子工程**：
+- 共享逻辑放在 `common/src/main/java/`
+- 每个版本独立维护 `gradlew` / `settings.gradle` / `build.gradle` / metadata
+- 子工程通过 `sourceSets.main.java.srcDirs = ['src/main/java', '../common/src/main/java']` 引入共享源码
+- 构建系统、资源入口、mod metadata 与版本特定 API 保持隔离，避免单 `build.gradle` 强兼容
+
+### 发布方式
+
+- GitHub `v*` tag 自动触发 `.github/workflows/release.yml`
+- workflow 分三套 JDK 构建：
+  - Forge 1.20.1 → JDK 17
+  - NeoForge 1.21.11 → JDK 21
+  - NeoForge 26.2 → JDK 25
+- 三个构建产物会在 release job 中汇总上传为同一个 GitHub Release 附件
+- 本地批量构建可使用 `build-all.sh`
+
+### 发布验证闭环
+
+1. 在对应模块执行 `./gradlew build --no-daemon --offline`
+2. 确认目标 jar 出现在各自 `build/libs/`
+3. 部署到目标实例 `mods/` 目录
+4. 启动游戏并检查日志无关键报错
+5. 执行关键命令 / 核心功能 smoke test（如 `/ai`、`/ai build`、`[KNOWLEDGE]`）
+
 已实现：
 - `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
 - `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）
@@ -104,11 +147,24 @@ xxsx
 
 ## 知识库
 
-内置知识库位于 `resources/knowledge/`（jar 内），外置覆盖路径 `config/xxsx_builder/knowledge/`。
+内置知识库会随各版本模块一起打包，外置覆盖路径仍为 `config/xxsx_builder/knowledge/`。
 
-```
+当前内置资源目录：
+- `forge-1.20.1/src/main/resources/knowledge/`
+- `neoforge-1.21.11/src/main/resources/knowledge/`
+- `neoforge-26.2/src/main/resources/knowledge/`
+
+外置覆盖目录：
+- `config/xxsx_builder/knowledge/`
+
+```text
 knowledge/
 ├── ftbquests/      # FTB Quests 任务系统
 ├── bloodmagic/     # Blood Magic 血魔法
 └── ...             # 自行添加更多模组
 ```
+
+维护约定：
+- 新增共享 Java 逻辑优先放 `common/`
+- 新增内置知识库内容时，要同步三个目标版本模块的 `src/main/resources/knowledge/`
+- 用户自定义/扩展文档优先放外置 `config/xxsx_builder/knowledge/`

@@ -7,8 +7,11 @@ import com.xxsx.builder.ai.CommandExecutor;
 import com.xxsx.builder.config.BuilderConfig;
 import com.xxsx.builder.voxel.VoxelBuildManager;
 import com.xxsx.builder.config.ModConfigScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -23,7 +26,7 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Mod(XxsxBuilder.MODID)
+@Mod(value = XxsxBuilder.MODID, dist = Dist.CLIENT)
 public class XxsxBuilder {
     public static final String MODID = "xxsx_builder";
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -37,6 +40,7 @@ public class XxsxBuilder {
 
     static final String SYSTEM_PROMPT = """
             你是 xxsx 的智建核心，运行在 Minecraft 26.2 NeoForge 26.2.0.7-beta 中。
+            定位：客户端便携建筑辅助，只面向本地客户端/单机集成服使用；专用服务端安装无效。
 
             工作方式：
             你在 Minecraft 26.2 NeoForge 26.2.0.7-beta 中，玩家通过 /ai 与你对话。
@@ -50,6 +54,7 @@ public class XxsxBuilder {
             [QUERY]search 主题名 关键词[/QUERY] — 在联动文档中检索关键词
             [QUERY]pmx 路径[/QUERY] — 查模型顶点/面/建议比例
             [QUERY]recipe 物品ID[/QUERY] — 查合成配方
+            [QUERY]jei 物品ID[/QUERY] — 查 JEI 是否可用，并用服务端配方索引列出合成
 
             知识库位置：jar内置 + config/xxsx_builder/knowledge/（用户可放 .md 文件）
             AI 也可生成文档存入该目录；[KNOWLEDGE]主题名[/KNOWLEDGE] 用于加载某个主题的知识文档。
@@ -105,6 +110,7 @@ public class XxsxBuilder {
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.addListener(this::onMainMenu);
+        NeoForge.EVENT_BUS.addListener(this::onMainMenuInit);
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -115,6 +121,21 @@ public class XxsxBuilder {
         if (event.getScreen() instanceof TitleScreen && !SHOWN_CONFIG.getAndSet(true)) {
             event.setNewScreen(new ModConfigScreen());
         }
+    }
+
+    public void onMainMenuInit(ScreenEvent.Init.Post event) {
+        if (!(event.getScreen() instanceof TitleScreen screen)) return;
+
+        int buttonW = 82;
+        int x = Math.max(4, Math.min(screen.width - buttonW - 4, screen.width / 2 + 104));
+        int y = screen.height / 4 + 72;
+        event.addListener(Button.builder(Component.literal("智能核心设置"), b -> openConfigScreen())
+            .bounds(x, y, buttonW, 20)
+            .build());
+    }
+
+    private void openConfigScreen() {
+        Minecraft.getInstance().gui.setScreen(new ModConfigScreen());
     }
 
     @SubscribeEvent
@@ -140,7 +161,9 @@ public class XxsxBuilder {
         if (player == null || player.level().isClientSide()) return;
 
         player.sendSystemMessage(Component.literal(
-            "[xxsx智能核心] v1.0.5 已装载 (NeoForge 26.2 Beta)"));
+            "[xxsx智能核心] v1.1.0 客户端辅助已装载 (NeoForge 26.2 Beta)"));
+        player.sendSystemMessage(Component.literal(
+            "定位：客户端便携建筑辅助；专用服务端安装无效。"));
         boolean usingBuiltin = config.providerUrl.isEmpty();
         player.sendSystemMessage(Component.literal(
             usingBuiltin

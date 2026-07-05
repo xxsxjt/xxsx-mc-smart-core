@@ -217,6 +217,9 @@ public class CommandExecutor {
                 case "recipe" -> {
                     return queryRecipes(arg);
                 }
+                case "jei" -> {
+                    return queryJei(arg);
+                }
                 case "gamerule" -> {
                     return queryGamerule(source, arg);
                 }
@@ -224,7 +227,7 @@ public class CommandExecutor {
                     return querySystem();
                 }
                 case "help" -> {
-                    return "可用查询: player, item <id>, block x y z, nearby <半径>, world, file <路径>, dir <目录>, mods, mod <modid>, doc <主题>, summarize <主题>, search <主题> <关键词>, recipe <物品id>";
+                    return "可用查询: player, item <id>, block x y z, nearby <半径>, world, file <路径>, dir <目录>, mods, mod <modid>, doc <主题>, summarize <主题>, search <主题> <关键词>, recipe <物品id>, jei <物品id>";
                 }
                 default -> {
                     return "未知查询类型: " + type + "，输入 [QUERY]help[/QUERY] 查看可用查询";
@@ -630,19 +633,99 @@ public class CommandExecutor {
     }
 
     private String queryRecipes(String itemId) {
+        return queryRecipes(itemId, true);
+    }
+
+    private String queryRecipes(String itemId, boolean includeJeiHint) {
         if (itemId.isEmpty()) return "用法: recipe <物品ID>";
         var itemHolder = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(toResourceLocation(itemId));
         if (itemHolder.isEmpty()) return "物品未找到: " + itemId;
         var item = itemHolder.get().value();
-        var stack = new net.minecraft.world.item.ItemStack(item);
         var level = server.overworld();
+        var displayContext = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level);
         StringBuilder sb = new StringBuilder();
         sb.append(itemId).append(" 的合成/制作方式:\n");
         int found = 0;
 
-        // 1.21.5: recipe manager API 大幅重构，配方查询暂不可用
-        sb.append("  配方查询暂不适用于此 MC 版本");
+        for (var holder : server.getRecipeManager().getRecipes()) {
+            try {
+                var recipe = holder.value();
+                List<net.minecraft.world.item.ItemStack> results = recipe.display().stream()
+                    .flatMap(display -> display.result().resolveForStacks(displayContext).stream())
+                    .filter(stack -> !stack.isEmpty())
+                    .collect(Collectors.toList());
+                if (results.stream().noneMatch(stack -> stack.getItem() == item)) continue;
+
+                found++;
+                if (found > 12) {
+                    sb.append("  ...(还有更多配方，建议在 JEI 里继续筛选)\n");
+                    break;
+                }
+
+                sb.append("  [").append(recipe.getType()).append("] ")
+                    .append(summarizeIngredients(recipe))
+                    .append(" -> ")
+                    .append(summarizeResults(results, item))
+                    .append("\n");
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (found == 0) {
+            sb.append("  未找到服务端配方（可能是 JEI 插件/机器配方/隐藏配方/运行时生成配方）\n");
+        }
+        if (includeJeiHint && isModLoaded("jei")) {
+            sb.append("  JEI 已安装：图形界面中可对物品按 R 查合成、按 U 查用途。");
+        }
         return sb.toString();
+    }
+
+    private String queryJei(String itemId) {
+        String jeiInfo = isModLoaded("jei")
+            ? "JEI 已安装，可在客户端物品上按 R 查合成、按 U 查用途。"
+            : "未检测到 JEI；当前只能使用服务端配方索引。";
+        if (itemId == null || itemId.isBlank()) {
+            return jeiInfo + "\n用法: jei <物品ID>  例: jei minecraft:diamond_pickaxe";
+        }
+        return jeiInfo + "\n" + queryRecipes(itemId, false);
+    }
+
+    private String summarizeIngredients(net.minecraft.world.item.crafting.Recipe<?> recipe) {
+        var ingredients = recipe.placementInfo().ingredients();
+        if (ingredients.isEmpty()) return "材料未知";
+        String summary = ingredients.stream()
+            .map(this::summarizeIngredient)
+            .filter(s -> !s.isBlank())
+            .limit(9)
+            .collect(Collectors.joining(" + "));
+        if (ingredients.size() > 9) summary += " + ...";
+        return summary.isBlank() ? "材料未知" : summary;
+    }
+
+    private String summarizeIngredient(net.minecraft.world.item.crafting.Ingredient ingredient) {
+        if (ingredient == null || ingredient.isEmpty()) return "空";
+        List<String> names = ingredient.items()
+            .limit(4)
+            .map(holder -> new net.minecraft.world.item.ItemStack(holder).getDisplayName().getString())
+            .distinct()
+            .collect(Collectors.toList());
+        if (names.isEmpty()) return "自定义材料";
+        return names.size() == 1 ? names.get(0) : "(" + String.join("/", names) + (names.size() >= 4 ? "/..." : "") + ")";
+    }
+
+    private String summarizeResults(List<net.minecraft.world.item.ItemStack> results, net.minecraft.world.item.Item targetItem) {
+        String summary = results.stream()
+            .filter(stack -> stack.getItem() == targetItem)
+            .map(stack -> stack.getCount() + "x " + stack.getDisplayName().getString())
+            .distinct()
+            .limit(4)
+            .collect(Collectors.joining(" / "));
+        return summary.isBlank() ? "目标物品" : summary;
+    }
+
+    private boolean isModLoaded(String modId) {
+        return net.neoforged.fml.ModList.get().getMods().stream()
+            .anyMatch(m -> m.getModId().equalsIgnoreCase(modId));
     }
 
     private boolean isBlocked(String cmd) {

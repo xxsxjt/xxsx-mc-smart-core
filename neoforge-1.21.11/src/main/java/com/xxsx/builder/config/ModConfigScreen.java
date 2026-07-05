@@ -180,7 +180,7 @@ public class ModConfigScreen extends Screen {
         }
 
         drawCenteredStr(g, "§b§lxxsx 的智能核心", cx, 10, 0xFFFFFF);
-        drawCenteredStr(g, "§b[xxsx的智能核心] §fv1.0.5 已装载", cx, 22, 0xD8F4FF);
+        drawCenteredStr(g, "§b[xxsx的智能核心] §fv1.1.0 已装载", cx, 22, 0xD8F4FF);
         drawCenteredStr(g, "§7这是启动配置界面：先设置 API，再用 /ai 与智能核心对话", cx, 34, 0xAAB6C2);
 
         int worldTop = getWorldTop();
@@ -188,8 +188,8 @@ public class ModConfigScreen extends Screen {
 
         g.fill(panelLeft, worldTop, panelLeft + PANEL_W, worldTop + 42, 0x18FFFFFF);
         drawCenteredStr(g, "§e◆ 世界高度 ◆", cx, worldTop + 4, 0xFFFF55);
-        drawStr(g, "§7原版地表 §f" + BASE + " §7→ 高度 = " + BASE + " × 倍数", panelLeft + 4, worldTop + 14, 0xAAAAAA);
-        drawStr(g, "§7倍数 §f" + mul + "x  §7= 实际 §e" + (BASE * mul) + " 格", panelLeft + PANEL_W / 2 + 34, worldTop + 27, 0xFFFFFF);
+        drawStr(g, "§7注：-64，+320", panelLeft - 4, worldTop + 14, 0xAAAAAA);
+        drawStr(g, "§7倍数 §f" + mul + "x  §7= 实际 §e" + (BASE * mul) + " 格", panelLeft + PANEL_W / 2 + 58, worldTop + 27, 0xFFFFFF);
         int bl = panelLeft + 30;
         int br = panelLeft + PANEL_W - 30;
         int by = worldTop + 36;
