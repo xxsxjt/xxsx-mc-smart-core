@@ -1,6 +1,8 @@
 # xxsx-mc-smart-core
 
-xxsx的智能核心 — Minecraft 1.20.1 Forge AI 助手模组。
+xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
+
+当前 GitHub Release `neoforge-v1.1.1` 只更新并验证 MC 1.21.11 / MC 26.2 的 NeoForge 客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.1 未测试、未发布。
 
 ## 功能
 
@@ -57,10 +59,15 @@ blocks_per_tick = 1000      # 20000 方块/秒
 default_scale = 300
 ```
 
-## 依赖
+## 依赖 / 版本对应
 
-- Minecraft 1.20.1
-- Forge 47.2.0+
+| Minecraft | Loader | Mod 版本 | 本轮状态 |
+|---|---|---|---|
+| MC 1.20.1 | Forge 47.2.0+ | v1.1.0 | 本轮未更新 |
+| MC 1.21.11 | NeoForge 21.11.42 | v1.1.1 | 本轮已构建/部署验证 |
+| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.1 | 本轮已构建/部署验证 |
+
+NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
 ## 技术栈
 

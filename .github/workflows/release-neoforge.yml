@@ -49,7 +49,7 @@ jobs:
         with: { path: jars }
       - uses: softprops/action-gh-release@v2
         with:
-          name: NeoForge Client ${{ github.ref_name }}
+          name: NeoForge Client MC 1.21.11 + MC 26.2 ${{ github.ref_name }}
           body_path: .github/release-notes/neoforge-client.md
           files: jars/**/*.jar
           generate_release_notes: true

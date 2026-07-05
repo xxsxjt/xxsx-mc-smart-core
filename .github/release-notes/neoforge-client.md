@@ -1,4 +1,4 @@
-# NeoForge Client Builder Assistant
+# NeoForge Client Builder Assistant - MC 1.21.11 / MC 26.2
 
 本次发布只更新并验证以下 Minecraft 版本：
 
