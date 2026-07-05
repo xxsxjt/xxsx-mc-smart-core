@@ -161,7 +161,7 @@ public class XxsxBuilder {
         if (player == null || player.level().isClientSide()) return;
 
         player.displayClientMessage(Component.literal(
-            "[xxsx智能核心] v1.1.0 客户端辅助已装载"), false);
+            "[xxsx智能核心] v1.1.1 客户端辅助已装载 (MC 1.21.11)"), false);
         player.displayClientMessage(Component.literal(
             "定位：客户端便携建筑辅助；专用服务端安装无效。"), false);
         boolean usingBuiltin = config.providerUrl.isEmpty();

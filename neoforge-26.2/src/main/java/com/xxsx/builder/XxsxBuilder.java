@@ -161,7 +161,7 @@ public class XxsxBuilder {
         if (player == null || player.level().isClientSide()) return;
 
         player.sendSystemMessage(Component.literal(
-            "[xxsx智能核心] v1.1.0 客户端辅助已装载 (NeoForge 26.2 Beta)"));
+            "[xxsx智能核心] v1.1.1 客户端辅助已装载 (MC 26.2 / NeoForge 26.2 Beta)"));
         player.sendSystemMessage(Component.literal(
             "定位：客户端便携建筑辅助；专用服务端安装无效。"));
         boolean usingBuiltin = config.providerUrl.isEmpty();

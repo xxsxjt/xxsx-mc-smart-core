@@ -79,15 +79,17 @@ default_scale = 300
 
 ## 当前状态 (2026-07-05)
 
-v1.1.0 — 多版本发布同步更新（Forge 1.20.1 / NeoForge 1.21.11 / NeoForge 26.2）。
+v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 26.2）。
+
+注意：这一轮没有更新 Forge 1.20.1；NeoForge 1.21.1 只保留为本地试验构建，未纳入已测试发布。
 
 ### 支持版本 / 发布矩阵
 
-| 模块目录 | Loader | 目标版本 | JDK | 产物名 |
-|---------|--------|----------|-----|--------|
-| `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | 17 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
-| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | 21 | `xxsx-builder-neoforge-1.21.11-1.1.0.jar` |
-| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | 25 | `xxsx-builder-neoforge-26.2-1.1.0.jar` |
+| 模块目录 | Loader | 目标版本 | Mod 版本 | 本轮状态 | 产物名 |
+|---------|--------|----------|----------|----------|--------|
+| `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.0 | 本轮未更新 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
+| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.1 | 本轮已构建/部署验证 | `xxsx-builder-neoforge-1.21.11-1.1.1.jar` |
+| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.1 | 本轮已构建/部署验证 | `xxsx-builder-neoforge-26.2-1.1.1.jar` |
 
 ### 项目结构
 
@@ -108,12 +110,14 @@ xxsx_builder/
 
 ### 发布方式
 
-- GitHub `v*` tag 自动触发 `.github/workflows/release.yml`
-- workflow 分三套 JDK 构建：
+- GitHub `v*` tag 自动触发 `.github/workflows/release.yml`，用于完整发布矩阵
+- GitHub `neoforge-v*` tag 自动触发 `.github/workflows/release-neoforge.yml`，仅发布 NeoForge 1.21.11 / 26.2 客户端 jar
+- 完整发布 workflow 分三套 JDK 构建：
   - Forge 1.20.1 → JDK 17
   - NeoForge 1.21.11 → JDK 21
   - NeoForge 26.2 → JDK 25
 - 三个构建产物会在 release job 中汇总上传为同一个 GitHub Release 附件
+- NeoForge 专项 workflow 只上传两个已测试 NeoForge 产物，不包含 Forge 1.20.1 和本地试验的 NeoForge 1.21.1
 - 本地批量构建可使用 `build-all.sh`
 
 ### 发布验证闭环

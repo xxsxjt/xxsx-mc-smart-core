@@ -4,7 +4,7 @@ license="AGPL-3.0"
 
 [[mods]]
 modId="xxsx_builder"
-version="1.1.0"
+version="1.1.1"
 displayName="xxsx Client Builder Assistant"
 logoFile="logo.png"
 description='''

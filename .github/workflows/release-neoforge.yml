@@ -1,0 +1,55 @@
+name: Build & Release NeoForge Client
+
+on:
+  push:
+    tags:
+      - 'neoforge-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  neoforge-1-21-11:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin' }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.gradle
+          key: ${{ runner.os }}-gradle-nf12111-${{ hashFiles('neoforge-1.21.11/**/gradle-wrapper.properties','common/**/*.gradle*') }}
+          restore-keys: ${{ runner.os }}-gradle-nf12111-
+      - run: cd neoforge-1.21.11 && chmod +x gradlew && ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with: { name: neoforge-1.21.11-jar, path: neoforge-1.21.11/build/libs/*.jar }
+
+  neoforge-26-2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '25', distribution: 'temurin' }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.gradle
+          key: ${{ runner.os }}-gradle-nf262-${{ hashFiles('neoforge-26.2/**/gradle-wrapper.properties','common/**/*.gradle*') }}
+          restore-keys: ${{ runner.os }}-gradle-nf262-
+      - run: cd neoforge-26.2 && chmod +x gradlew && ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with: { name: neoforge-26.2-jar, path: neoforge-26.2/build/libs/*.jar }
+
+  release:
+    needs: [neoforge-1-21-11, neoforge-26-2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: jars }
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: NeoForge Client ${{ github.ref_name }}
+          body_path: .github/release-notes/neoforge-client.md
+          files: jars/**/*.jar
+          generate_release_notes: true
