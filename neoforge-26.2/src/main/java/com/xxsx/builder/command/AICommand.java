@@ -319,9 +319,9 @@ public class AICommand {
     private static void runAgent(SessionManager sm, CommandExecutor exec, ChatSession session,
             String prompt, String playerPos, String anchorPos, CommandSourceStack source, int depth) {
 
-        // 安全兜底：100 轮自动停
-        if (depth > 100) {
-            source.sendSuccess(() -> Component.literal("§e已执行 100 轮，自动暂停"), false);
+        // 安全兜底：工具链自动回灌后仍避免无意义循环
+        if (depth > 20) {
+            source.sendSuccess(() -> Component.literal("§e已执行 20 轮，自动暂停"), false);
             return;
         }
 
@@ -347,8 +347,9 @@ public class AICommand {
             // 执行 [CMD]
             CommandExecutor.ExecutionResult execResult = exec.execute(processed, source);
             String execFeedback = execResult.feedbackText();
-            boolean shouldContinue = execResult.continueRequested
-                && (execResult.executedAny() || execResult.hasQueryFeedback());
+            boolean hasToolFeedback = !execFeedback.isBlank()
+                && (execResult.executedAny() || execResult.hasQueryFeedback() || execResult.commandsFailed > 0);
+            boolean shouldContinue = hasToolFeedback || execResult.continueRequested;
             XxsxBuilder.LOGGER.info("[AICommand] execSummary found={} dispatched={} failed={} queries={} continueRequested={} shouldContinue={} feedback={}",
                 execResult.commandsFound, execResult.commandsDispatched, execResult.commandsFailed,
                 execResult.queriesHandled, execResult.continueRequested, shouldContinue,
@@ -356,13 +357,18 @@ public class AICommand {
 
             if (!execFeedback.isEmpty())
                 source.sendSuccess(() -> ChatFold.foldExecResult(execFeedback), false);
+            if (!execFeedback.isEmpty()) {
+                sm.addSystemMessage(session.playerName, buildToolResultBlock(execResult, execFeedback));
+            }
             VoxelBuildManager vm = XxsxBuilder.getInstance().getBuildManager();
             if (vm != null && vm.hasActiveJob(session.playerName)) {
                 source.sendSuccess(() -> Component.literal("§7建造进行中，完成后可继续对话"), false);
                 return;
             }
             if (shouldContinue) {
-                runAgent(sm, exec, session, "继续", playerPos, anchorPos, source, depth + 1);
+                runAgent(sm, exec, session,
+                    "根据上一条 [TOOL_RESULT] 自行判断下一步：如果任务完成，直接简短总结；如果还需要操作，输出新的 [QUERY] 或 [CMD]。",
+                    playerPos, anchorPos, source, depth + 1);
             }
         }, source.getServer())
         .exceptionally(e -> {
@@ -370,6 +376,17 @@ public class AICommand {
                 source.sendFailure(Component.literal("§cAI 异常: " + e.getMessage()));
             return null;
         });
+    }
+
+    private static String buildToolResultBlock(CommandExecutor.ExecutionResult result, String feedback) {
+        return "[TOOL_RESULT]\n"
+            + "commands_found=" + result.commandsFound + "\n"
+            + "commands_sent=" + result.commandsDispatched + "\n"
+            + "commands_failed=" + result.commandsFailed + "\n"
+            + "queries_handled=" + result.queriesHandled + "\n"
+            + "next_policy=自行判断：完成就总结；需要继续就输出新的 [QUERY] 或 [CMD]；不要重复已经成功的同一条命令。\n"
+            + "feedback:\n" + feedback.strip() + "\n"
+            + "[/TOOL_RESULT]";
     }
 
     private static int handleBuildSpeed(CommandSourceStack src, String n) {

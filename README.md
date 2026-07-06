@@ -2,7 +2,9 @@
 
 xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
 
-当前 GitHub Release `neoforge-v1.1.1` 只更新并验证 MC 1.21.11 / MC 26.2 的 NeoForge 客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.1 未测试、未发布。
+当前 GitHub Release `neoforge-26.2-v1.1.5` 只更新并验证 MC 26.2 / NeoForge 26.2.0.7-beta 的客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.11 仍停留在上一轮 v1.1.1，NeoForge 1.21.1 未测试、未发布。
+
+当前本地 26.2 模块已追加背包/容器辅助、虚无终端收入联动、AI 工具结果自动回灌与便携分类指令查询，版本为 v1.1.5；本轮没有更新 Forge 1.20.1 和 NeoForge 1.21.11。
 
 ## 功能
 
@@ -14,6 +16,7 @@ xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
 | `/ai addmodel` | 添加个人 API 密钥 |
 | `[CMD]` 标签 | AI 输出指令自动执行并反馈结果 |
 | `[QUERY]` 标签 | 查询游戏状态（物品/方块/实体/配方/世界） |
+| 联动指令库 | 查询可执行联动模板，如 Curios 槽位命令 |
 | `[KNOWLEDGE]` 标签 | 查询知识库（支持 jar 内置 + 外置扩展） |
 | 会话持久化 | 同一玩家重连保留对话历史 |
 | 上下文压缩 | 超限自动截断或 AI 总结 |
@@ -64,8 +67,8 @@ default_scale = 300
 | Minecraft | Loader | Mod 版本 | 本轮状态 |
 |---|---|---|---|
 | MC 1.20.1 | Forge 47.2.0+ | v1.1.0 | 本轮未更新 |
-| MC 1.21.11 | NeoForge 21.11.42 | v1.1.1 | 本轮已构建/部署验证 |
-| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.1 | 本轮已构建/部署验证 |
+| MC 1.21.11 | NeoForge 21.11.42 | v1.1.1 | 上一轮已发布，本轮未更新 |
+| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.5 | 本地背包/容器辅助、虚无终端收入联动、AI 工具链更新，已构建/部署/hash 验证；背包菜单崩溃热修 |
 
 NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
@@ -84,9 +87,11 @@ NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
-## 当前状态 (2026-07-05)
+## 当前状态 (2026-07-07)
 
-v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 26.2）。
+v1.1.5-26.2 — MC 26.2 NeoForge 客户端辅助新增背包/容器整理转移、虚无终端收入联动、AI 工具结果自动回灌与分类指令查询，并修复原版背包 `InventoryMenu.getType()` 崩溃。
+
+上一轮 GitHub Release 为 v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 26.2）。
 
 注意：这一轮没有更新 Forge 1.20.1；NeoForge 1.21.1 只保留为本地试验构建，未纳入已测试发布。
 
@@ -95,8 +100,8 @@ v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 2
 | 模块目录 | Loader | 目标版本 | Mod 版本 | 本轮状态 | 产物名 |
 |---------|--------|----------|----------|----------|--------|
 | `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.0 | 本轮未更新 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
-| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.1 | 本轮已构建/部署验证 | `xxsx-builder-neoforge-1.21.11-1.1.1.jar` |
-| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.1 | 本轮已构建/部署验证 | `xxsx-builder-neoforge-26.2-1.1.1.jar` |
+| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.1 | 上一轮已发布，本轮未更新 | `xxsx-builder-neoforge-1.21.11-1.1.1.jar` |
+| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.5 | 本地背包/容器辅助与 AI 工具链更新，已构建/部署/hash 验证；背包菜单崩溃热修 | `xxsx-builder-neoforge-26.2-1.1.5.jar` |
 
 ### 项目结构
 
@@ -139,6 +144,7 @@ xxsx_builder/
 已实现：
 - `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
 - `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）
+- `[QUERY]commands` / `[QUERY]curios` 联动指令库，支持 Curios 槽位命令模板
 - `[KNOWLEDGE]` 知识库（jar 内置 ftbquests/bloodmagic，外置可扩展）
 - `[CMD]` 指令自动执行，错误反馈给 AI
 - PMX 体素建筑：逐体素 UV 纹理采样 + 超采样抗锯齿 + CIELAB 107 色匹配

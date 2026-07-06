@@ -34,6 +34,49 @@ public class CommandExecutor {
     private static final Pattern CONTINUE_PATTERN = Pattern.compile("\\[CONTINUE\\]", Pattern.CASE_INSENSITIVE);
     private static final Pattern ENCHANT_ENTRY_PATTERN = Pattern.compile("\\{\\s*id\\s*:\\s*\"([^\"]+)\"\\s*,\\s*lvl\\s*:\\s*(\\d+)\\s*\\}");
     private static final Pattern CUSTOM_NAME_PATTERN = Pattern.compile("Name\\s*:\\s*('(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\")");
+    private record IntegrationDef(String modId, String topic, String name, String role) {}
+    private static final List<IntegrationDef> INTEGRATIONS = List.of(
+        new IntegrationDef("jei", "jei", "JEI 物品管理器", "配方/用途提示，配合 [QUERY]recipe 和 [QUERY]jei 使用"),
+        new IntegrationDef("justenoughprofessions", "jei", "JEI 工作方块", "村民职业与工作方块提示"),
+        new IntegrationDef("jade", "jade", "玉 Jade", "准星方块/实体识别，辅助建筑定位和调试"),
+        new IntegrationDef("appleskin", "appleskin", "AppleSkin", "食物营养/饱和度提示，补充 [QUERY]item 食物信息"),
+        new IntegrationDef("waystones", "waystones", "Waystones", "传送点/旅行网络规划"),
+        new IntegrationDef("naturescompass", "compasses", "Nature's Compass", "生物群系定位建议"),
+        new IntegrationDef("explorerscompass", "compasses", "Explorer's Compass", "结构定位建议"),
+        new IntegrationDef("sophisticatedbackpacks", "sophisticated", "Sophisticated Backpacks", "建筑材料随身携带与升级规划"),
+        new IntegrationDef("sophisticatedstorage", "sophisticated", "Sophisticated Storage", "大规模材料仓储规划"),
+        new IntegrationDef("curios", "curios", "Curios", "饰品槽位和装备类模组识别"),
+        new IntegrationDef("xaerominimap", "xaero", "Xaero's Minimap", "建筑点位、路径和地形导航"),
+        new IntegrationDef("xaeroworldmap", "xaero", "Xaero's World Map", "区域规划与大地图标记"),
+        new IntegrationDef("enchdesc", "enchanting", "Enchantment Descriptions", "附魔说明"),
+        new IntegrationDef("enchantmentinsights", "enchanting", "Enchantment Insights", "附魔台预览"),
+        new IntegrationDef("easymagic", "enchanting", "Easy Magic", "附魔台便捷操作"),
+        new IntegrationDef("taxfreelevels", "enchanting", "Tax Free Levels", "经验等级消耗优化"),
+        new IntegrationDef("legendarytooltips", "clientui", "Legendary Tooltips", "物品提示框增强"),
+        new IntegrationDef("controlling", "clientui", "Controlling", "键位冲突查询"),
+        new IntegrationDef("mousetweaks", "clientui", "Mouse Tweaks", "库存操作优化"),
+        new IntegrationDef("lootr", "exploration", "Lootr", "探索战利品箱识别"),
+        new IntegrationDef("shogi", "exploration", "Shogi", "可作为建筑/装饰主题参考"),
+        new IntegrationDef("earth_online", "projectmods", "Earth Online", "本工作区 26.2 项目模组"),
+        new IntegrationDef("templenihility", "projectmods", "Temple of Nihility", "本工作区 26.2 项目模组")
+    );
+    private static final List<String> CURIOS_SLOTS = List.of(
+        "back", "belt", "body", "bracelet", "charm", "curio", "feet", "hands", "head", "necklace", "ring"
+    );
+    private static final Map<String, String> CURIOS_SLOT_ALIASES = Map.ofEntries(
+        Map.entry("back", "back"), Map.entry("背部", "back"), Map.entry("背饰", "back"),
+        Map.entry("belt", "belt"), Map.entry("腰带", "belt"),
+        Map.entry("body", "body"), Map.entry("身体", "body"), Map.entry("胸饰", "body"),
+        Map.entry("bracelet", "bracelet"), Map.entry("手镯", "bracelet"), Map.entry("手环", "bracelet"),
+        Map.entry("charm", "charm"), Map.entry("护符", "charm"), Map.entry("符咒", "charm"),
+        Map.entry("curio", "curio"), Map.entry("饰品", "curio"), Map.entry("饰品栏", "curio"),
+        Map.entry("饰品槽", "curio"), Map.entry("栏位", "curio"), Map.entry("通用", "curio"),
+        Map.entry("feet", "feet"), Map.entry("脚部", "feet"), Map.entry("鞋", "feet"),
+        Map.entry("hands", "hands"), Map.entry("手部", "hands"), Map.entry("手套", "hands"),
+        Map.entry("head", "head"), Map.entry("头部", "head"), Map.entry("头饰", "head"),
+        Map.entry("necklace", "necklace"), Map.entry("项链", "necklace"),
+        Map.entry("ring", "ring"), Map.entry("戒指", "ring"), Map.entry("指环", "ring")
+    );
     private final MinecraftServer server;
     private final BuilderConfig config;
     private Set<String> blacklist;
@@ -177,6 +220,15 @@ public class CommandExecutor {
                 case "mods" -> {
                     return queryMods();
                 }
+                case "integrations", "integration", "联动" -> {
+                    return queryIntegrations(arg);
+                }
+                case "commands", "command", "cmds", "cmdlib", "指令", "命令" -> {
+                    return queryCommandLibrary(arg, extra, source);
+                }
+                case "curios" -> {
+                    return queryCommandLibrary("curios", (arg + " " + extra).trim(), source);
+                }
                 case "mod" -> {
                     return queryMod(arg);
                 }
@@ -211,7 +263,7 @@ public class CommandExecutor {
                     return querySystem();
                 }
                 case "help" -> {
-                    return "可用查询: player, item <id>, block x y z, nearby <半径>, world, file <路径>, dir <目录>, mods, mod <modid>, doc <主题>, summarize <主题>, search <主题> <关键词>, recipe <物品id>, jei <物品id>";
+                    return "可用查询: player, item <id>, block x y z, nearby <半径>, world, file <路径>, dir <目录>, mods, integrations [关键词], commands [modid/动作], curios <动作> [槽位] [数量], mod <modid>, doc <主题>, summarize <主题>, search <主题> <关键词>, recipe <物品id>, jei <物品id>";
                 }
                 default -> {
                     return "未知查询类型: " + type + "，输入 [QUERY]help[/QUERY] 查看可用查询";
@@ -317,6 +369,233 @@ public class CommandExecutor {
         return net.neoforged.fml.ModList.get().getMods().stream()
             .map(m -> m.getModId() + " " + m.getVersion())
             .limit(50).collect(Collectors.joining("\n", "已装 mods:\n", ""));
+    }
+
+    private String queryIntegrations(String filter) {
+        String needle = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
+        StringBuilder sb = new StringBuilder("26.2 可联动客户端/内容模组:\n");
+        int shown = 0;
+        int loaded = 0;
+        for (IntegrationDef def : INTEGRATIONS) {
+            if (!needle.isEmpty()
+                && !def.modId().contains(needle)
+                && !def.topic().contains(needle)
+                && !def.name().toLowerCase(Locale.ROOT).contains(needle)) {
+                continue;
+            }
+            Optional<String> version = loadedModVersion(def.modId());
+            if (version.isPresent()) loaded++;
+            shown++;
+            sb.append(version.isPresent() ? "  [已安装] " : "  [未检测] ")
+                .append(def.modId()).append(" — ").append(def.name());
+            version.ifPresent(v -> sb.append(" ").append(v));
+            sb.append("\n    主题: ").append(def.topic())
+                .append(" | ").append(def.role())
+                .append("\n");
+        }
+        if (shown == 0) {
+            return "未找到匹配的联动项: " + filter + "\n可用: [QUERY]integrations[/QUERY]";
+        }
+        sb.append("已检测 ").append(loaded).append("/").append(shown)
+            .append(" 项。读取总清单: [QUERY]doc integrations[/QUERY]；读取主题: [QUERY]doc <主题>[/QUERY]");
+        return sb.toString();
+    }
+
+    private String queryCommandLibrary(String topic, String detail, CommandSourceStack source) {
+        String normalized = topic == null ? "" : topic.trim().toLowerCase(Locale.ROOT);
+        String merged = ((topic == null ? "" : topic) + " " + (detail == null ? "" : detail))
+            .trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty() || containsAny(normalized, "help", "index", "categories", "category", "list", "ls", "分类", "目录", "列表")) {
+            return commandLibraryIndex();
+        }
+        if (isCuriosTopic(normalized)) {
+            return queryCuriosCommandLibrary(detail, source);
+        }
+        if (looksLikeCuriosCommand(merged)) {
+            return queryCuriosCommandLibrary(merged, source);
+        }
+        return "未找到内置指令库: " + normalized
+            + "\n可用分类: slots/饰品栏/curios。"
+            + "\n可直接查: [QUERY]commands add 饰品栏[/QUERY]、[QUERY]commands slots[/QUERY]、[QUERY]curios add ring[/QUERY]"
+            + "\n通用资料仍可用 [QUERY]integrations " + normalized + "[/QUERY] 或 [QUERY]doc " + normalized + "[/QUERY]";
+    }
+
+    private String commandLibraryIndex() {
+        return "内置联动指令库分类:\n"
+            + commandLibraryStatus("curios", "slots / 饰品栏 / Curios 槽位", "commands add 饰品栏") + "\n"
+            + "便携查法:\n"
+            + "  [QUERY]commands add 饰品栏[/QUERY] — 默认给自己加 1 个通用 curio 槽\n"
+            + "  [QUERY]commands add ring[/QUERY] — 给自己加 1 个戒指槽\n"
+            + "  [QUERY]commands set ring 2[/QUERY] — 设置戒指槽为 2 个\n"
+            + "  [QUERY]commands slots[/QUERY] — 查看可用槽位与中文别名\n"
+            + "工具链规则: 查询/执行后会返回 [TOOL_RESULT]，模型会自动判断下一步，无需为了等结果强行写 [CONTINUE]。";
+    }
+
+    private String commandLibraryStatus(String modId, String name, String example) {
+        boolean modLoaded = isModLoaded(modId);
+        boolean commandLoaded = server.getCommands().getDispatcher().getRoot().getChild(modId) != null;
+        return "  " + (modLoaded ? "[已安装] " : "[未检测] ") + modId + " — " + name
+            + (commandLoaded ? "，命令已注册" : "，命令未注册/世界未加载")
+            + "；例: [QUERY]" + example + "[/QUERY]";
+    }
+
+    private String queryCuriosCommandLibrary(String detail, CommandSourceStack source) {
+        String d = detail == null ? "" : detail.trim().toLowerCase(Locale.ROOT);
+        boolean modLoaded = isModLoaded("curios");
+        boolean commandLoaded = server.getCommands().getDispatcher().getRoot().getChild("curios") != null;
+        String slot = findCuriosSlot(d);
+        int amount = findFirstInt(d).orElse(1);
+        String action = findCuriosAction(d);
+        String player = "@s";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Curios 内置指令库 (26.2)\n")
+            .append("分类: slots / 饰品栏 / curio；意图: ").append(action)
+            .append("；槽位: ").append(slot).append("；数量: ").append(amount).append("\n")
+            .append("状态: ").append(modLoaded ? "curios 已安装" : "未检测到 curios")
+            .append("；").append(commandLoaded ? "/curios 命令已注册" : "/curios 命令未注册")
+            .append("；需要游戏管理员权限。\n");
+
+        if (d.isEmpty() || action.equals("help")) {
+            appendCuriosGeneralHelp(sb);
+            return sb.toString();
+        }
+        if (action.equals("slots")) {
+            appendCuriosSlots(sb);
+            return sb.toString();
+        }
+
+        switch (action) {
+            case "list" -> sb.append("列出已注册 Curios 槽位来源:\n")
+                .append("[CMD]/curios list[/CMD]\n");
+            case "add" -> sb.append("给当前玩家增加 Curios 槽位。")
+                .append("若玩家只说“加饰品栏位”，默认用通用槽 `curio`；戒指用 `ring`。\n")
+                .append("[CMD]/curios add ").append(slot).append(" ").append(player).append(" ").append(amount).append("[/CMD]\n");
+            case "set" -> sb.append("把当前玩家的某个 Curios 槽位数量设置为指定值:\n")
+                .append("[CMD]/curios set ").append(slot).append(" ").append(player).append(" ").append(amount).append("[/CMD]\n");
+            case "remove" -> sb.append("从当前玩家减少 Curios 槽位数量:\n")
+                .append("[CMD]/curios remove ").append(slot).append(" ").append(player).append(" ").append(amount).append("[/CMD]\n");
+            case "clear" -> sb.append("清空当前玩家某类 Curios 槽位物品:\n")
+                .append("[CMD]/curios clear ").append(player).append(" ").append(slot).append("[/CMD]\n")
+                .append("清空全部 Curios 槽位: [CMD]/curios clear ").append(player).append("[/CMD]\n");
+            case "drop" -> sb.append("让当前玩家某类 Curios 槽位物品掉落到地上:\n")
+                .append("[CMD]/curios drop ").append(player).append(" ").append(slot).append("[/CMD]\n")
+                .append("掉落全部 Curios 槽位: [CMD]/curios drop ").append(player).append("[/CMD]\n");
+            case "reset" -> sb.append("重置当前玩家 Curios 槽位修改:\n")
+                .append("[CMD]/curios reset ").append(player).append("[/CMD]\n");
+            case "replace" -> {
+                String item = findItemId(d).orElse("<item_id>");
+                int index = findIndexAfter(d, "index").orElse(0);
+                sb.append("把物品放入/替换当前玩家 Curios 槽位。index 从 0 开始:\n")
+                    .append("[CMD]/curios replace ").append(slot).append(" ").append(index)
+                    .append(" ").append(player).append(" with ").append(item);
+                if (amount > 1) sb.append(" ").append(amount);
+                sb.append("[/CMD]\n");
+            }
+            default -> appendCuriosGeneralHelp(sb);
+        }
+
+        sb.append("槽位速查: ").append(String.join(", ", CURIOS_SLOTS)).append("\n")
+            .append("常用别名: 饰品栏/饰品槽/饰品=curio, 戒指=ring, 护符=charm, 项链=necklace, 背部=back。\n")
+            .append("下一步: 若玩家就是要执行，把上面的 [CMD] 原样输出；执行结果会进入 [TOOL_RESULT]，再判断是否完成。");
+        return sb.toString();
+    }
+
+    private void appendCuriosGeneralHelp(StringBuilder sb) {
+        sb.append("常用模板:\n")
+            .append("  给自己加 1 个通用饰品槽: [CMD]/curios add curio @s 1[/CMD]\n")
+            .append("  给自己加 1 个戒指槽: [CMD]/curios add ring @s 1[/CMD]\n")
+            .append("  设置戒指槽为 2 个: [CMD]/curios set ring @s 2[/CMD]\n")
+            .append("  减少 1 个戒指槽: [CMD]/curios remove ring @s 1[/CMD]\n")
+            .append("  清空戒指槽物品: [CMD]/curios clear @s ring[/CMD]\n")
+            .append("  列出槽位来源: [CMD]/curios list[/CMD]\n")
+            .append("便携查询: [QUERY]commands add 饰品栏[/QUERY]、[QUERY]commands add ring[/QUERY]、[QUERY]commands set ring 2[/QUERY]、[QUERY]commands slots[/QUERY]\n");
+        appendCuriosSlots(sb);
+    }
+
+    private void appendCuriosSlots(StringBuilder sb) {
+        sb.append("内置槽位: ").append(String.join(", ", CURIOS_SLOTS)).append("\n")
+            .append("中文别名: 饰品栏=curio, 饰品槽=curio, 饰品=curio, 戒指=ring, 护符=charm, 项链=necklace, 头部=head, 背部=back, 腰带=belt, 手镯=bracelet, 手部=hands, 脚部=feet, 身体=body。\n");
+    }
+
+    private String findCuriosAction(String detail) {
+        if (detail == null || detail.isBlank()) return "help";
+        if (containsAny(detail, "replace", "装备", "放入", "替换")) return "replace";
+        if (containsAny(detail, "set", "设置", "设为")) return "set";
+        if (containsAny(detail, "add", "添加", "增加", "扩容", "加")) return "add";
+        if (containsAny(detail, "remove", "减少", "移除", "减")) return "remove";
+        if (containsAny(detail, "clear", "清空")) return "clear";
+        if (containsAny(detail, "drop", "掉落", "丢出")) return "drop";
+        if (containsAny(detail, "reset", "重置", "恢复")) return "reset";
+        if (containsAny(detail, "slot", "slots", "槽位", "栏位", "饰品栏", "饰品槽", "列表槽位")) return "slots";
+        if (containsAny(detail, "list", "列表", "列出")) return "list";
+        return "help";
+    }
+
+    private boolean isCuriosTopic(String text) {
+        return text.equals("curios")
+            || text.equals("curio")
+            || text.equals("slots")
+            || text.equals("slot")
+            || text.equals("饰品")
+            || text.equals("饰品栏")
+            || text.equals("饰品槽")
+            || text.equals("槽位")
+            || text.equals("栏位");
+    }
+
+    private boolean looksLikeCuriosCommand(String text) {
+        if (text == null || text.isBlank()) return false;
+        return containsAny(text, "curios", "curio", "slot", "slots", "饰品", "饰品栏", "饰品槽", "槽位", "栏位",
+                "ring", "戒指", "charm", "护符", "necklace", "项链", "back", "背部", "belt", "腰带")
+            || containsAny(text, "add", "添加", "增加", "扩容", "加", "set", "设置", "remove", "减少", "clear", "清空", "reset", "重置");
+    }
+
+    private String findCuriosSlot(String detail) {
+        if (detail != null) {
+            for (var entry : CURIOS_SLOT_ALIASES.entrySet()) {
+                if (detail.contains(entry.getKey().toLowerCase(Locale.ROOT))) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return "curio";
+    }
+
+    private boolean containsAny(String text, String... needles) {
+        for (String needle : needles) {
+            if (text.contains(needle.toLowerCase(Locale.ROOT))) return true;
+        }
+        return false;
+    }
+
+    private Optional<Integer> findFirstInt(String text) {
+        Matcher matcher = Pattern.compile("\\b(\\d+)\\b").matcher(text == null ? "" : text);
+        if (matcher.find()) return Optional.of(Integer.parseInt(matcher.group(1)));
+        String t = text == null ? "" : text;
+        if (containsAny(t, "十个", "十格", "十栏", "十槽")) return Optional.of(10);
+        if (containsAny(t, "九个", "九格", "九栏", "九槽")) return Optional.of(9);
+        if (containsAny(t, "八个", "八格", "八栏", "八槽")) return Optional.of(8);
+        if (containsAny(t, "七个", "七格", "七栏", "七槽")) return Optional.of(7);
+        if (containsAny(t, "六个", "六格", "六栏", "六槽")) return Optional.of(6);
+        if (containsAny(t, "五个", "五格", "五栏", "五槽")) return Optional.of(5);
+        if (containsAny(t, "四个", "四格", "四栏", "四槽")) return Optional.of(4);
+        if (containsAny(t, "三个", "三格", "三栏", "三槽")) return Optional.of(3);
+        if (containsAny(t, "两个", "两格", "两栏", "两槽", "二个", "二格", "二栏", "二槽")) return Optional.of(2);
+        if (containsAny(t, "一个", "一格", "一栏", "一槽", "加个")) return Optional.of(1);
+        return Optional.empty();
+    }
+
+    private Optional<Integer> findIndexAfter(String text, String key) {
+        Matcher matcher = Pattern.compile(key + "\\s+(\\d+)").matcher(text == null ? "" : text);
+        if (matcher.find()) return Optional.of(Integer.parseInt(matcher.group(1)));
+        return Optional.empty();
+    }
+
+    private Optional<String> findItemId(String text) {
+        Matcher matcher = Pattern.compile("\\b[a-z0-9_.-]+:[a-z0-9_./-]+\\b").matcher(text == null ? "" : text);
+        if (matcher.find()) return Optional.of(matcher.group());
+        return Optional.empty();
     }
 
     private String queryMod(String modId) {
@@ -712,8 +991,14 @@ public class CommandExecutor {
     }
 
     private boolean isModLoaded(String modId) {
+        return loadedModVersion(modId).isPresent();
+    }
+
+    private Optional<String> loadedModVersion(String modId) {
         return net.neoforged.fml.ModList.get().getMods().stream()
-            .anyMatch(m -> m.getModId().equalsIgnoreCase(modId));
+            .filter(m -> m.getModId().equalsIgnoreCase(modId))
+            .map(m -> m.getVersion().toString())
+            .findFirst();
     }
 
     private boolean isBlocked(String cmd) {

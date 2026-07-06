@@ -188,7 +188,7 @@ public class ModConfigScreen extends Screen {
 
         g.fill(0, 0, this.width, this.height, 0xD0101018);
         drawCenteredStr(g, "xxsx 的智能核心", cx, 10, 0xFFFFFFFF);
-        drawCenteredStr(g, "[xxsx的智能核心] v1.1.1 已装载 - MC 26.2", cx, 22, 0xFFD8F4FF);
+        drawCenteredStr(g, "[xxsx的智能核心] v1.1.5 已装载 - MC 26.2", cx, 22, 0xFFD8F4FF);
         drawCenteredStr(g, "启动配置界面：先设置 API，再用 /ai 与智能核心对话", cx, 34, 0xFFAAB6C2);
 
         int worldTop = getWorldTop();

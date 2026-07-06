@@ -15,18 +15,63 @@ import java.util.stream.Collectors;
  */
 public class KnowledgeBase {
     private static final Set<String> CORE_TOPICS = Set.of("ftbquests");
-    private static final Map<String, List<String>> BUILTIN_DOCS = Map.of(
-        "ftbquests", List.of("任务系统.md"),
-        "bloodmagic", List.of("祭坛与炼金术.md")
+    private static final Map<String, String> TOPIC_ALIASES = Map.ofEntries(
+        Map.entry("integration", "integrations"),
+        Map.entry("integrations", "integrations"),
+        Map.entry("联动", "integrations"),
+        Map.entry("justenoughprofessions", "jei"),
+        Map.entry("naturescompass", "compasses"),
+        Map.entry("explorerscompass", "compasses"),
+        Map.entry("sophisticatedbackpacks", "sophisticated"),
+        Map.entry("sophisticatedstorage", "sophisticated"),
+        Map.entry("sophisticatedcore", "sophisticated"),
+        Map.entry("xaerominimap", "xaero"),
+        Map.entry("xaeroworldmap", "xaero"),
+        Map.entry("enchdesc", "enchanting"),
+        Map.entry("enchantmentdescriptions", "enchanting"),
+        Map.entry("enchantmentinsights", "enchanting"),
+        Map.entry("easymagic", "enchanting"),
+        Map.entry("taxfreelevels", "enchanting"),
+        Map.entry("legendarytooltips", "clientui"),
+        Map.entry("controlling", "clientui"),
+        Map.entry("mousetweaks", "clientui"),
+        Map.entry("sodium", "clientui"),
+        Map.entry("sodium_extra", "clientui"),
+        Map.entry("drippyloadingscreen", "clientui"),
+        Map.entry("fancymenu", "clientui"),
+        Map.entry("lootr", "exploration"),
+        Map.entry("shogi", "exploration"),
+        Map.entry("earth_online", "projectmods"),
+        Map.entry("templenihility", "projectmods")
+    );
+    private static final Map<String, List<String>> BUILTIN_DOCS = Map.ofEntries(
+        Map.entry("ftbquests", List.of("任务系统.md")),
+        Map.entry("bloodmagic", List.of("祭坛与炼金术.md")),
+        Map.entry("integrations", List.of("26.2联动清单.md")),
+        Map.entry("jei", List.of("26.2联动.md")),
+        Map.entry("jade", List.of("26.2联动.md")),
+        Map.entry("appleskin", List.of("26.2联动.md")),
+        Map.entry("waystones", List.of("26.2联动.md")),
+        Map.entry("compasses", List.of("26.2联动.md")),
+        Map.entry("sophisticated", List.of("26.2联动.md")),
+        Map.entry("curios", List.of("26.2联动.md")),
+        Map.entry("xaero", List.of("26.2联动.md")),
+        Map.entry("enchanting", List.of("26.2联动.md")),
+        Map.entry("clientui", List.of("26.2联动.md")),
+        Map.entry("exploration", List.of("26.2联动.md")),
+        Map.entry("projectmods", List.of("26.2联动.md"))
     );
 
     public static String readKnowledge(String kbName) {
-        kbName = normalizeTopic(kbName);
-        String live = readLiveKnowledge(kbName);
+        String requested = normalizeTopic(kbName);
+        String topic = resolveTopic(requested);
+        String live = readLiveKnowledge(topic);
         if (live != null) return live;
-        String external = readExternal(kbName);
+        String external = readExternal(requested);
         if (external != null) return external;
-        return readBuiltinSimple(kbName);
+        external = readExternal(topic);
+        if (external != null) return external;
+        return readBuiltinSimple(topic);
     }
 
     private static String readExternal(String kbName) {
@@ -45,14 +90,16 @@ public class KnowledgeBase {
     }
 
     public static boolean isCoreTopic(String kbName) {
-        return CORE_TOPICS.contains(normalizeTopic(kbName));
+        return CORE_TOPICS.contains(resolveTopic(normalizeTopic(kbName)));
     }
 
     public static String describeTopic(String kbName) {
-        String topic = normalizeTopic(kbName);
+        String requested = normalizeTopic(kbName);
+        String topic = resolveTopic(requested);
         if (readLiveKnowledge(topic) != null) return "实时/生成型联动知识";
         String root = XxsxBuilder.getInstance() != null
             ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_builder/knowledge";
+        if (Files.isDirectory(Paths.get(root, requested))) return "外置联动文档";
         if (Files.isDirectory(Paths.get(root, topic))) return "外置联动文档";
         if (BUILTIN_DOCS.containsKey(topic)) return isCoreTopic(topic) ? "内置核心知识" : "内置联动文档";
         return null;
@@ -137,6 +184,7 @@ public class KnowledgeBase {
         Set<String> names = new LinkedHashSet<>();
         names.addAll(CORE_TOPICS);
         names.addAll(BUILTIN_DOCS.keySet());
+        names.addAll(TOPIC_ALIASES.keySet());
         String root = XxsxBuilder.getInstance() != null
             ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_builder/knowledge";
         Path dir = Paths.get(root);
@@ -148,7 +196,7 @@ public class KnowledgeBase {
     }
 
     public static String summarizeKnowledge(String kbName, java.util.function.Function<String, String> summarizer) {
-        String topic = normalizeTopic(kbName);
+        String topic = resolveTopic(normalizeTopic(kbName));
         String content = readKnowledge(topic);
         if (content == null || content.isBlank()) return null;
         if (summarizer == null) return content;
@@ -156,7 +204,7 @@ public class KnowledgeBase {
     }
 
     public static String searchKnowledge(String kbName, String keyword) {
-        String topic = normalizeTopic(kbName);
+        String topic = resolveTopic(normalizeTopic(kbName));
         String content = readKnowledge(topic);
         if (content == null || content.isBlank()) return null;
         if (keyword == null || keyword.isBlank()) return content;
@@ -178,7 +226,7 @@ public class KnowledgeBase {
         int lastEnd = 0;
         while (m.find()) {
             result.append(aiResponse, lastEnd, m.start());
-            String kbName = normalizeTopic(m.group(1));
+            String kbName = resolveTopic(normalizeTopic(m.group(1)));
             String content = readKnowledge(kbName);
             if (content != null) {
                 result.append("\n").append(content).append("\n");
@@ -201,5 +249,10 @@ public class KnowledgeBase {
 
     private static String normalizeTopic(String kbName) {
         return kbName == null ? "" : kbName.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String resolveTopic(String kbName) {
+        String topic = normalizeTopic(kbName);
+        return TOPIC_ALIASES.getOrDefault(topic, topic);
     }
 }

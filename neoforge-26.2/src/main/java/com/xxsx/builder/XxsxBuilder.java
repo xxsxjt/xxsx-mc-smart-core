@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.xxsx.builder.ai.SessionManager;
 import com.xxsx.builder.command.AICommand;
 import com.xxsx.builder.ai.CommandExecutor;
+import com.xxsx.builder.client.InventoryAssistClient;
 import com.xxsx.builder.config.BuilderConfig;
 import com.xxsx.builder.voxel.VoxelBuildManager;
 import com.xxsx.builder.config.ModConfigScreen;
@@ -48,6 +49,9 @@ public class XxsxBuilder {
 
             [QUERY]item 物品ID[/QUERY] — 查原版/模组物品属性
             [QUERY]player|world|nearby|system[/QUERY] — 查当前游戏状态
+            [QUERY]integrations[/QUERY] — 列出当前 26.2 实例可联动的客户端/内容模组
+            [QUERY]commands [分类/modid/动作][/QUERY] — 查内置联动指令库和可执行模板
+            [QUERY]curios <动作> [槽位] [数量][/QUERY] — 查 Curios 饰品槽位指令模板
             [QUERY]mod modid[/QUERY] — 查某个模组是否安装/版本
             [QUERY]doc 主题名[/QUERY] — 读取某个主题的联动文档
             [QUERY]summarize 主题名[/QUERY] — 把联动文档总结成玩家能看懂的话
@@ -63,11 +67,14 @@ public class XxsxBuilder {
             /ai build "路径" → PMX建筑 | /ai build y/n → 确认
             /ai build stop → 停止 | /ai build speed N → 调速
             /ai compact → 压缩旧对话继续 | /ai clear → 清空旧对话重开
-            [QUERY]...[/QUERY] → 通用原版查询 / 联动查询 / 文档总结
+            [QUERY]...[/QUERY] → 通用原版查询 / 联动查询 / 指令库 / 文档总结；先用 integrations 看可联动 mod
+            [QUERY]commands ...[/QUERY] → 查可执行联动命令；例如加饰品栏查 [QUERY]commands add 饰品栏[/QUERY] 或 [QUERY]curios add ring[/QUERY]
             [KNOWLEDGE]主题名[/KNOWLEDGE] → 加载指定主题知识（核心知识或模组联动文档）
 
             其他：用 [CMD]标签 执行指令。可多轮迭代。小操作直接执行，大操作先说明。
-            只有确实需要根据执行结果继续判断时，才输出 [CONTINUE]；简单任务完成后不要继续尝试更多同类命令。
+            当玩家要求操作已安装联动模组（例如“给我加 Curios 饰品/戒指槽位”）时，优先查内置指令库，而不是只读文档；查询到 [CMD] 模板后直接执行。
+            调用 [QUERY] 或 [CMD] 后，系统会返回 [TOOL_RESULT] 并自动让你再判断一次：完成就总结；还需要操作就继续输出新的 [QUERY] 或 [CMD]。
+            不要重复执行 [TOOL_RESULT] 里已经成功的同一条命令；除非没有工具结果但仍需继续推理，才输出 [CONTINUE]。
             当对话太长或模型提示上下文超限时，可用 [CMD]/ai compact[/CMD]；只有确定旧上下文没用了，才用 [CMD]/ai clear[/CMD]。
             在 26.2 / 新版本里，/give 的复杂物品请优先使用方括号组件格式，不要再输出旧的 {Enchantments:[...]} NBT 拼法。
             例如附魔物品应优先写成：/give @s minecraft:diamond_sword[minecraft:enchantments={levels:{"minecraft:sharpness":5,"minecraft:unbreaking":3}}] 1
@@ -91,6 +98,9 @@ public class XxsxBuilder {
             /data get|merge|remove block|entity <目标> [路径]
             /attribute <目标> <属性> get|base|set [值]
             /execute as <目标>|at <目标>|positioned <x y z>|if entity <目标>|if block <坐标> <方块> run <指令>
+            /curios list
+            /curios add <slot> <player> [amount] 例如 /curios add curio @s 1 或 /curios add ring @s 1
+            /curios set|remove <slot> <player> [amount]  /curios clear|drop <player> [slot]  /curios reset <player>
 
             方块状态:
             门: half=lower|upper,hinge=left|right,facing,open,powered
@@ -111,6 +121,8 @@ public class XxsxBuilder {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.addListener(this::onMainMenu);
         NeoForge.EVENT_BUS.addListener(this::onMainMenuInit);
+        NeoForge.EVENT_BUS.addListener(InventoryAssistClient::onScreenInit);
+        NeoForge.EVENT_BUS.addListener(InventoryAssistClient::onClientTick);
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -161,7 +173,7 @@ public class XxsxBuilder {
         if (player == null || player.level().isClientSide()) return;
 
         player.sendSystemMessage(Component.literal(
-            "[xxsx智能核心] v1.1.1 客户端辅助已装载 (MC 26.2 / NeoForge 26.2 Beta)"));
+            "[xxsx智能核心] v1.1.5 客户端辅助已装载 (MC 26.2 / NeoForge 26.2 Beta)"));
         player.sendSystemMessage(Component.literal(
             "定位：客户端便携建筑辅助；专用服务端安装无效。"));
         boolean usingBuiltin = config.providerUrl.isEmpty();

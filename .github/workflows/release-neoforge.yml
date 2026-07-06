@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'neoforge-v*'
+      - 'neoforge-26.2-v*'
   workflow_dispatch:
 
 permissions:
@@ -17,12 +18,13 @@ jobs:
       - name: Verify release assets
         run: |
           set -euo pipefail
-          test -f "release-assets/${GITHUB_REF_NAME}/xxsx-builder-neoforge-1.21.11-1.1.1.jar"
-          test -f "release-assets/${GITHUB_REF_NAME}/xxsx-builder-neoforge-26.2-1.1.1.jar"
-          sha256sum "release-assets/${GITHUB_REF_NAME}"/*.jar
+          shopt -s nullglob
+          jars=(release-assets/${GITHUB_REF_NAME}/*.jar)
+          test "${#jars[@]}" -gt 0
+          sha256sum "${jars[@]}"
       - uses: softprops/action-gh-release@v2
         with:
-          name: NeoForge Client MC 1.21.11 + MC 26.2 ${{ github.ref_name }}
+          name: Xxsx Smart Core ${{ github.ref_name }}
           body_path: .github/release-notes/neoforge-client.md
           files: release-assets/${{ github.ref_name }}/*.jar
           fail_on_unmatched_files: true
