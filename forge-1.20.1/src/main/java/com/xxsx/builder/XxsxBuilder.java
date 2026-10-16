@@ -5,8 +5,8 @@ import com.xxsx.builder.ai.SessionManager;
 import com.xxsx.builder.command.AICommand;
 import com.xxsx.builder.ai.CommandExecutor;
 import com.xxsx.builder.config.BuilderConfig;
-import com.xxsx.builder.voxel.VoxelBuildManager;
 import com.xxsx.builder.config.ModConfigScreen;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -24,9 +24,9 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Mod(XxsxBuilder.MODID)
+@Mod(value = XxsxBuilder.MODID, dist = Dist.CLIENT)
 public class XxsxBuilder {
-    public static final String MODID = "xxsx_builder";
+    public static final String MODID = "xxsx_mc_smart_core";
     public static final Logger LOGGER = LogUtils.getLogger();
     private static final AtomicBoolean SHOWN_CONFIG = new AtomicBoolean(false);
 
@@ -34,7 +34,6 @@ public class XxsxBuilder {
     private BuilderConfig config;
     private SessionManager sessionManager;
     private CommandExecutor commandExecutor;
-    private VoxelBuildManager buildManager;
 
     static final String SYSTEM_PROMPT = """
             你是 xxsx 的智建核心，运行在 Minecraft 1.20.1 Forge 中。
@@ -90,8 +89,6 @@ public class XxsxBuilder {
     public XxsxBuilder() {
         instance = this;
         this.config = new BuilderConfig();
-        int savedSpeed = AICommand.loadBuildSpeed();
-        if (savedSpeed > 0) this.config.buildSpeed = savedSpeed;
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(this::setup);
 
@@ -118,7 +115,6 @@ public class XxsxBuilder {
         this.sessionManager.setWorldName(
             event.getServer().getWorldData().getLevelName());
         this.commandExecutor = new CommandExecutor(event.getServer(), config);
-        this.buildManager = new VoxelBuildManager(event.getServer());
         AICommand.register(event.getServer().getCommands().getDispatcher());
     }
 
@@ -154,5 +150,4 @@ public class XxsxBuilder {
     public BuilderConfig getConfig() { return config; }
     public SessionManager getSessionManager() { return sessionManager; }
     public CommandExecutor getCommandExecutor() { return commandExecutor; }
-    public VoxelBuildManager getBuildManager() { return buildManager; }
 }

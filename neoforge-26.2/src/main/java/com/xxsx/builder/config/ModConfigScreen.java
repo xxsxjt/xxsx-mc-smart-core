@@ -24,6 +24,10 @@ public class ModConfigScreen extends Screen {
     private static final int PANEL_W = 300;
     private static final int LEFT_W = 70;
     private static final int FIELD_H = 18;
+    private static final int ACTION_SAVE_W = 58;
+    private static final int ACTION_CANCEL_W = 50;
+    private static final int ACTION_DISMISS_W = 96;
+    private static final int ACTION_GAP = 6;
 
     private EditBox mulBox;
     private EditBox urlBox;
@@ -37,14 +41,20 @@ public class ModConfigScreen extends Screen {
     private int modelListScroll;
     private List<String> fetchedModels = new ArrayList<>();
     private CompletableFuture<List<String>> fetchFuture;
-    private String statusMsg = "";
+    private Component statusMsg = Component.empty();
     private int statusColor = 0xFF808080;
     private int panelLeft;
     private int panelW;
     private int cx;
+    private final Screen parent;
 
     public ModConfigScreen() {
-        super(Component.literal("xxsx 智能核心"));
+        this(null);
+    }
+
+    public ModConfigScreen(Screen parent) {
+        super(SmartCoreText.gui("title"));
+        this.parent = parent;
     }
 
     @Override
@@ -54,7 +64,8 @@ public class ModConfigScreen extends Screen {
         panelLeft = cx - panelW / 2;
 
         int heightY = getWorldTop() + 18;
-        mulBox = new EditBox(font, cx - 14, heightY, 32, 16, Component.literal("mul"));
+        mul = XxsxBuilder.getInstance().getConfig().worldHeightMultiplier();
+        mulBox = new EditBox(font, cx - 14, heightY, 32, 16, SmartCoreText.gui("config.multiplier"));
         mulBox.setValue(String.valueOf(mul));
         mulBox.setResponder(s -> {
             Integer parsed = parseInt(s);
@@ -76,22 +87,22 @@ public class ModConfigScreen extends Screen {
             }
         }).bounds(cx + 36, heightY - 1, 18, 18).build());
 
-        urlBox = new EditBox(font, fieldX(), getUrlY(), fieldW(), FIELD_H, Component.literal("url"));
+        urlBox = new EditBox(font, fieldX(), getUrlY(), fieldW(), FIELD_H, SmartCoreText.gui("config.api_url"));
         urlBox.setMaxLength(256);
         urlBox.setValue(XxsxBuilder.getInstance().getConfig().providerUrl());
         addRenderableWidget(urlBox);
 
-        keyBox = new EditBox(font, fieldX(), getKeyY(), fieldW(), FIELD_H, Component.literal("key"));
+        keyBox = new EditBox(font, fieldX(), getKeyY(), fieldW(), FIELD_H, SmartCoreText.gui("config.key"));
         keyBox.setMaxLength(256);
         keyBox.setValue(XxsxBuilder.getInstance().getConfig().providerKey());
         addRenderableWidget(keyBox);
 
-        addRenderableWidget(Button.builder(Component.literal("获取模型列表"), b -> fetchModels())
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.fetch_models"), b -> fetchModels())
                 .bounds(fieldX(), getFetchY(), 96, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("使用 Agnes 内置模型"), b -> useBuiltinModel())
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.use_agnes"), b -> useBuiltinModel())
                 .bounds(fieldX() + 102, getFetchY(), Math.max(92, fieldW() - 102), 18).build());
 
-        modelBox = new EditBox(font, fieldX(), getModelY(), fieldW() - 22, FIELD_H, Component.literal("model"));
+        modelBox = new EditBox(font, fieldX(), getModelY(), fieldW() - 22, FIELD_H, SmartCoreText.gui("config.model"));
         modelBox.setMaxLength(128);
         modelBox.setValue(XxsxBuilder.getInstance().getConfig().getEffectiveModel());
         addRenderableWidget(modelBox);
@@ -99,23 +110,29 @@ public class ModConfigScreen extends Screen {
         modelToggleButton = addRenderableWidget(Button.builder(Component.literal(modelListOpen ? "^" : "v"), b -> toggleModelList())
                 .bounds(fieldX() + fieldW() - 18, getModelY(), 18, 18).build());
 
-        ctxBox = new EditBox(font, fieldX(), getContextY(), 60, FIELD_H, Component.literal("ctx"));
+        ctxBox = new EditBox(font, fieldX(), getContextY(), 60, FIELD_H, SmartCoreText.gui("config.context"));
         ctxBox.setValue(String.valueOf(getStoredContextTokens()));
         addRenderableWidget(ctxBox);
 
-        addRenderableWidget(Button.builder(Component.literal("保存"), b -> applyAndClose())
-                .bounds(fieldX(), getActionY(), 62, 18).build());
+        int actionX = getActionX();
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.save"), b -> applyAndClose())
+                .bounds(actionX, getActionY(), ACTION_SAVE_W, 18).build());
         addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
-                .bounds(fieldX() + 70, getActionY(), 50, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Agnes官网"), b -> openExternalUrl("https://platform.agnes-ai.com/", "Agnes官网"))
+                .bounds(actionX + ACTION_SAVE_W + ACTION_GAP, getActionY(), ACTION_CANCEL_W, 18).build());
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.dont_show_again"), b -> dismissAndClose())
+                .bounds(actionX + ACTION_SAVE_W + ACTION_GAP + ACTION_CANCEL_W + ACTION_GAP,
+                        getActionY(), ACTION_DISMISS_W, 18).build());
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.agnes_site"),
+                b -> openExternalUrl("https://platform.agnes-ai.com/", SmartCoreText.gui("button.agnes_site")))
                 .bounds(getTopLinkX(), 8, 86, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("DeepSeek官网"), b -> openExternalUrl("https://platform.deepseek.com/", "DeepSeek官网"))
+        addRenderableWidget(Button.builder(SmartCoreText.gui("button.deepseek_site"),
+                b -> openExternalUrl("https://platform.deepseek.com/", SmartCoreText.gui("button.deepseek_site")))
                 .bounds(getTopLinkX(), 30, 86, 18).build());
     }
 
     private void toggleModelList() {
         if (fetchedModels.isEmpty()) {
-            setStatus("请先获取模型列表，或直接手填模型名", 0xFFFFFF55);
+            setStatus(SmartCoreText.gui("status.fetch_first"), 0xFFFFFF55);
             modelListOpen = false;
         } else {
             modelListOpen = !modelListOpen;
@@ -130,10 +147,10 @@ public class ModConfigScreen extends Screen {
         String url = urlBox.getValue().trim();
         String key = keyBox.getValue().trim();
         if (url.isEmpty() || key.isEmpty()) {
-            setStatus("请先填写 URL 和 Key", 0xFFFF5555);
+            setStatus(SmartCoreText.gui("status.enter_url_key"), 0xFFFF5555);
             return;
         }
-        setStatus("获取中...", 0xFFFFFF55);
+        setStatus(SmartCoreText.gui("status.loading"), 0xFFFFFF55);
         fetchedModels = new ArrayList<>();
         modelListOpen = false;
         modelListScroll = 0;
@@ -149,15 +166,15 @@ public class ModConfigScreen extends Screen {
         urlBox.setValue(config.providerUrl());
         keyBox.setValue(config.providerKey());
         modelBox.setValue(config.getEffectiveModel());
-        setStatus("已切换到内置 Agnes 模型", 0xFF55FF55);
+        setStatus(SmartCoreText.gui("status.using_agnes"), 0xFF55FF55);
     }
 
-    private void openExternalUrl(String url, String label) {
+    private void openExternalUrl(String url, Component label) {
         try {
             Util.getPlatform().openUri(new URI(url));
-            setStatus("已打开 " + label, 0xFF55FF55);
+            setStatus(SmartCoreText.gui("status.opened", label), 0xFF55FF55);
         } catch (Exception e) {
-            setStatus("打开失败: " + label, 0xFFFF5555);
+            setStatus(SmartCoreText.gui("status.open_failed", label), 0xFFFF5555);
         }
     }
 
@@ -168,11 +185,19 @@ public class ModConfigScreen extends Screen {
                 modelBox.getValue().trim(),
                 getContextMaxTokens()
         );
+        XxsxBuilder.getInstance().getConfig().setWorldHeightMultiplier(mul);
         XxsxBuilder.getInstance().getConfig().saveToFile();
         var sessionManager = XxsxBuilder.getInstance().getSessionManager();
         if (sessionManager != null) {
             sessionManager.reloadProvider();
         }
+        onClose();
+    }
+
+    private void dismissAndClose() {
+        var config = XxsxBuilder.getInstance().getConfig();
+        config.setShowStartupConfig(false);
+        config.saveToFile();
         onClose();
     }
 
@@ -187,18 +212,21 @@ public class ModConfigScreen extends Screen {
         pollFetchFuture();
 
         g.fill(0, 0, this.width, this.height, 0xD0101018);
-        drawCenteredStr(g, "xxsx 的智能核心", cx, 10, 0xFFFFFFFF);
-        drawCenteredStr(g, "[xxsx的智能核心] v1.1.5 已装载 - MC 26.2", cx, 22, 0xFFD8F4FF);
-        drawCenteredStr(g, "启动配置界面：先设置 API，再用 /ai 与智能核心对话", cx, 34, 0xFFAAB6C2);
+        drawCenteredStr(g, SmartCoreText.gui("title"), cx, 10, 0xFFFFFFFF);
+        drawCenteredStr(g, SmartCoreText.gui("config.version", XxsxBuilder.MOD_VERSION), cx, 22, 0xFFD8F4FF);
+        drawCenteredStr(g, SmartCoreText.gui("config.intro"), cx, 34, 0xFFAAB6C2);
 
         int worldTop = getWorldTop();
         int apiTop = getApiTop();
 
         g.fill(panelLeft, worldTop, panelLeft + panelW, worldTop + 42, 0x24FFFFFF);
         g.outline(panelLeft, worldTop, panelW, 42, 0x28FFFFFF);
-        drawCenteredStr(g, "世界高度", cx, worldTop + 4, 0xFFFFFF55);
-        drawStr(g, "注：-64，+320", panelLeft - 4, worldTop + 14, 0xFFAAAAAA);
-        drawStr(g, "倍数 " + mul + "x  = 实际 " + (BASE * mul) + " 格", panelLeft + panelW / 2 + 58, worldTop + 27, 0xFFFFFFFF);
+        drawCenteredStr(g, SmartCoreText.gui("config.world_height"), cx, worldTop + 4, 0xFFFFFF55);
+        drawStr(g, SmartCoreText.gui("config.world_height_note"), panelLeft - 4, worldTop + 14, 0xFFAAAAAA);
+        Component multiplierLabel = SmartCoreText.gui("config.multiplier", mul, BASE * mul);
+        int multiplierX = Math.min(this.width - font.width(multiplierLabel.getString()) - 4,
+            panelLeft + panelW / 2 + 58);
+        drawStr(g, multiplierLabel, multiplierX, worldTop + 27, 0xFFFFFFFF);
         int bl = panelLeft + 30;
         int br = panelLeft + panelW - 30;
         int by = worldTop + 36;
@@ -211,17 +239,20 @@ public class ModConfigScreen extends Screen {
 
         g.fill(panelLeft, apiTop, panelLeft + panelW, getApiBottom(), 0x24FFFFFF);
         g.outline(panelLeft, apiTop, panelW, getApiBottom() - apiTop, 0x28FFFFFF);
-        drawCenteredStr(g, "API 配置", cx, apiTop + 4, 0xFFFFFF55);
-        drawCenteredStr(g, statusMsg.isEmpty() ? "先填 URL + Key，再点获取模型；模型也可手填" : statusMsg,
-                cx, apiTop + 16, statusMsg.isEmpty() ? 0xFF808080 : statusColor);
+        drawCenteredStr(g, SmartCoreText.gui("config.api"), cx, apiTop + 4, 0xFFFFFF55);
+        boolean hasStatus = !statusMsg.getString().isEmpty();
+        drawCenteredStr(g, trimToWidth((hasStatus ? statusMsg : SmartCoreText.gui("config.api_hint")).getString(), panelW - 8),
+                cx, apiTop + 16, hasStatus ? statusColor : 0xFF808080);
 
-        drawStr(g, "API 地址", panelLeft + 4, getUrlY() + 2, 0xFFAAAAAA);
-        drawStr(g, "Key", panelLeft + 4, getKeyY() + 2, 0xFFAAAAAA);
-        drawStr(g, "模型", panelLeft + 4, getModelY() + 2, 0xFFAAAAAA);
-        drawStr(g, "上下文", panelLeft + 4, getContextY() + 2, 0xFFAAAAAA);
+        drawStr(g, SmartCoreText.gui("config.api_url"), panelLeft + 4, getUrlY() + 2, 0xFFAAAAAA);
+        drawStr(g, SmartCoreText.gui("config.key"), panelLeft + 4, getKeyY() + 2, 0xFFAAAAAA);
+        drawStr(g, SmartCoreText.gui("config.model"), panelLeft + 4, getModelY() + 2, 0xFFAAAAAA);
+        drawStr(g, SmartCoreText.gui("config.context"), panelLeft + 4, getContextY() + 2, 0xFFAAAAAA);
         drawStr(g, getCtxLabel(), fieldX() + 66, getContextY() + 2, 0xFF888888);
-        drawCenteredStr(g, "Agnes 可免费注册，DeepSeek 需付费开通 API", cx, apiTop + 134, 0xFF707070);
-        drawCenteredStr(g, "保存后会写入 common.toml，重新进游戏仍然生效", cx, apiTop + 144, 0xFF707070);
+        drawCenteredStr(g, trimToWidth(SmartCoreText.gui("config.provider_note").getString(), panelW - 8),
+            cx, apiTop + 134, 0xFF707070);
+        drawCenteredStr(g, trimToWidth(SmartCoreText.gui("config.save_note").getString(), panelW - 8),
+            cx, apiTop + 144, 0xFF707070);
 
         super.extractRenderState(g, mx, my, delta);
 
@@ -239,11 +270,14 @@ public class ModConfigScreen extends Screen {
             fetchedModels = models != null ? models : new ArrayList<>();
             modelListOpen = !fetchedModels.isEmpty();
             modelListScroll = 0;
-            setStatus(fetchedModels.isEmpty() ? "未获取到模型" : "已获取 " + fetchedModels.size() + " 个模型",
+            setStatus(fetchedModels.isEmpty()
+                    ? SmartCoreText.gui("status.no_models")
+                    : SmartCoreText.gui("status.models_fetched", fetchedModels.size()),
                     fetchedModels.isEmpty() ? 0xFFFF5555 : 0xFF55FF55);
         } catch (Exception e) {
             String msg = e.getMessage();
-            setStatus("获取失败: " + (msg == null || msg.isBlank() ? e.getClass().getSimpleName() : msg), 0xFFFF5555);
+            setStatus(SmartCoreText.gui("status.fetch_failed",
+                    msg == null || msg.isBlank() ? e.getClass().getSimpleName() : msg), 0xFFFF5555);
             fetchedModels = new ArrayList<>();
             modelListOpen = false;
         }
@@ -354,6 +388,11 @@ public class ModConfigScreen extends Screen {
         return getApiTop() + 118;
     }
 
+    private int getActionX() {
+        int totalWidth = ACTION_SAVE_W + ACTION_GAP + ACTION_CANCEL_W + ACTION_GAP + ACTION_DISMISS_W;
+        return panelLeft + Math.max(0, (panelW - totalWidth) / 2);
+    }
+
     private int getApiBottom() {
         return getApiTop() + 170;
     }
@@ -390,19 +429,19 @@ public class ModConfigScreen extends Screen {
         return parsed == null ? getStoredContextTokens() : parsed;
     }
 
-    private String getCtxLabel() {
-        return (getContextMaxTokens() / 1000) + "k tokens";
+    private Component getCtxLabel() {
+        return SmartCoreText.gui("config.context_value", getContextMaxTokens() / 1000);
     }
 
     private String shortenModelLabel(String model) {
         if (model == null || model.isBlank()) {
-            return "未设置";
+            return SmartCoreText.gui("model.unset").getString();
         }
         return model.length() > 35 ? model.substring(0, 34) + "..." : model;
     }
 
-    private void setStatus(String message, int color) {
-        this.statusMsg = message == null ? "" : message;
+    private void setStatus(Component message, int color) {
+        this.statusMsg = message == null ? Component.empty() : message;
         this.statusColor = color;
     }
 
@@ -428,20 +467,33 @@ public class ModConfigScreen extends Screen {
         g.text(font, text == null ? "" : text, x, y, ensureVisibleColor(color));
     }
 
+    private void drawStr(GuiGraphicsExtractor g, Component text, int x, int y, int color) {
+        drawStr(g, text == null ? "" : text.getString(), x, y, color);
+    }
+
     private void drawCenteredStr(GuiGraphicsExtractor g, String text, int centerX, int y, int color) {
         g.centeredText(font, text == null ? "" : text, centerX, y, ensureVisibleColor(color));
+    }
+
+    private void drawCenteredStr(GuiGraphicsExtractor g, Component text, int centerX, int y, int color) {
+        drawCenteredStr(g, text == null ? "" : text.getString(), centerX, y, color);
     }
 
     private int ensureVisibleColor(int color) {
         return (color >>> 24) == 0 ? color | 0xFF000000 : color;
     }
 
+    private String trimToWidth(String text, int maxWidth) {
+        if (text == null || font.width(text) <= maxWidth) {
+            return text == null ? "" : text;
+        }
+        String suffix = "...";
+        return font.plainSubstrByWidth(text, Math.max(1, maxWidth - font.width(suffix))) + suffix;
+    }
+
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            this.minecraft.gui.setScreen(null);
-        } else {
-            Minecraft.getInstance().gui.setScreen(null);
-        }
+        Minecraft client = this.minecraft != null ? this.minecraft : Minecraft.getInstance();
+        client.gui.setScreen(parent);
     }
 }

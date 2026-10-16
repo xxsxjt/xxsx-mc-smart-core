@@ -181,15 +181,21 @@ public class ChatSession {
     }
 
     public String summarizeDocument(String title, String content) {
+        return summarizeDocument(title, content, "");
+    }
+
+    public String summarizeDocument(String title, String content, String instruction) {
         if (content == null || content.isBlank()) return "没有可总结的文档内容";
         if (defaultProviderSupplier == null) return shortenDocument(content, 1200);
         try {
             AIProvider provider = defaultProviderSupplier.get();
             if (provider == null) return shortenDocument(content, 1200);
-            String prompt = "请把下面这份文档总结成给普通 Minecraft 玩家看的联动说明。"
-                + "重点保留：这是哪个模组/主题、能做什么、关键规则、常用物品/结构、容易踩坑的地方。"
-                + "如果文档内容是技术格式，也请翻成自然语言。\n\n"
-                + "主题: " + title + "\n\n文档内容:\n" + content;
+            String prompt = instruction == null || instruction.isBlank()
+                ? "请把下面这份文档总结成给普通 Minecraft 玩家看的联动说明。"
+                    + "重点保留：这是哪个模组/主题、能做什么、关键规则、常用物品/结构、容易踩坑的地方。"
+                    + "如果文档内容是技术格式，也请翻成自然语言。\n\n"
+                    + "主题: " + title + "\n\n文档内容:\n" + content
+                : instruction + "\n\nTopic: " + title + "\n\nDocument:\n" + content;
             String summary = provider.chat("__system__", prompt, Collections.emptyList())
                 .get(30000, TimeUnit.MILLISECONDS);
             if (summary != null && !summary.isBlank() && !summary.startsWith("§c")) {

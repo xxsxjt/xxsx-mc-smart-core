@@ -6,12 +6,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 独立日志输出 — 写入 logs/xxsx_builder.log
+ * 独立日志输出 — 写入 logs/xxsx_mc_smart_core.log
  * 不依赖 SLF4J/Log4J，直接写文件，便于排查 AI 交互问题。
  */
 public class ModLogger {
     private static final Path LOG_DIR = Paths.get("logs");
-    private static final Path LOG_FILE = LOG_DIR.resolve("xxsx_builder.log");
+    private static final Path LOG_FILE = LOG_DIR.resolve("xxsx_mc_smart_core.log");
     private static PrintWriter writer;
     private static final Object lock = new Object();
 
@@ -20,7 +20,7 @@ public class ModLogger {
             Files.createDirectories(LOG_DIR);
             writer = new PrintWriter(new FileWriter(LOG_FILE.toFile(), true));
         } catch (IOException e) {
-            System.err.println("[xxsx_builder] 无法创建日志文件: " + e.getMessage());
+            System.err.println("[xxsx_mc_smart_core] 无法创建日志文件: " + e.getMessage());
         }
     }
 

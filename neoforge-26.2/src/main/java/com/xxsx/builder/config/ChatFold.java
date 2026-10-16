@@ -14,7 +14,9 @@ public class ChatFold {
 
         String[] lines = fullText.split("\n", -1);
         if (lines.length <= FOLD_LINES && fullText.length() < FOLD_CHARS) {
-            return Component.literal("§b[AI] " + fullText.replace("\n", "\n§b[AI] "));
+            String prefix = SmartCoreText.chat("ai_prefix").getString();
+            return Component.literal(prefix + fullText.replace("\n", "\n" + prefix))
+                .withStyle(ChatFormatting.AQUA);
         }
 
         // 折叠版本
@@ -25,13 +27,14 @@ public class ChatFold {
         String shortText = preview.toString().trim();
         int remaining = fullText.length() - shortText.length();
 
-        MutableComponent folded = Component.literal("§b[AI] " + shortText);
-        MutableComponent expand = Component.literal(
-            " §8§o[+" + remaining + "字符, " + lines.length + "行, 悬停查看]");
+        MutableComponent folded = Component.literal(
+            SmartCoreText.chat("ai_prefix").getString() + shortText).withStyle(ChatFormatting.AQUA);
+        MutableComponent expand = SmartCoreText.chat("fold_expand", remaining, lines.length).copy();
 
         // 悬停显示全文，点击复制
         expand.withStyle(Style.EMPTY
-            .withColor(ChatFormatting.AQUA)
+            .withColor(ChatFormatting.DARK_GRAY)
+            .withItalic(true)
             .withHoverEvent(new HoverEvent.ShowText(
                 Component.literal(fullText).withStyle(ChatFormatting.WHITE)))
             .withClickEvent(new ClickEvent.CopyToClipboard(fullText)));
@@ -45,7 +48,8 @@ public class ChatFold {
         if (result.length() < 300) return Component.literal(result);
 
         String summary = result.substring(0, Math.min(200, result.length())) + "...";
-        MutableComponent c = Component.literal("§7" + summary + " §8[悬停看全部]");
+        MutableComponent c = Component.literal(summary + " ").withStyle(ChatFormatting.GRAY);
+        c.append(SmartCoreText.chat("hover_full").copy().withStyle(ChatFormatting.DARK_GRAY));
         c.withStyle(Style.EMPTY
             .withHoverEvent(new HoverEvent.ShowText(
                 Component.literal(result))));

@@ -8,7 +8,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 
-@net.neoforged.fml.common.EventBusSubscriber(modid = "xxsx_builder")
+@net.neoforged.fml.common.EventBusSubscriber(modid = "xxsx_mc_smart_core")
 public class BuilderConfig implements ChatConfig {
     private static final ModConfigSpec.Builder inner = new ModConfigSpec.Builder();
 
@@ -36,7 +36,7 @@ public class BuilderConfig implements ChatConfig {
 
     // === Knowledge Base ===
     public static final ModConfigSpec.ConfigValue<String> KNOWLEDGE_PATH =
-            inner.comment("知识库根目录，子目录名为知识库名").define("knowledge.path", "config/xxsx_builder/knowledge");
+            inner.comment("知识库根目录，子目录名为知识库名").define("knowledge.path", "config/xxsx_mc_smart_core/knowledge");
 
     // === Build ===
     public static final ModConfigSpec.BooleanValue BUILD_ASK_CLEAR =
@@ -50,10 +50,40 @@ public class BuilderConfig implements ChatConfig {
     public static final ModConfigSpec.IntValue DEFAULT_SCALE =
             inner.comment("默认缩放大小（方块）").defineInRange("build.default_scale", 300, 10, 2000);
 
+    // === World Integration ===
+    public static final ModConfigSpec.IntValue WORLD_HEIGHT_MULTIPLIER =
+            inner.comment("世界高度倍率提示，1=原版384格；供兼容mod或新世界预设读取，不会单独修改旧世界高度")
+                    .defineInRange("world.height_multiplier", 1, 1, 16);
+
     // === Safety ===
+    public static final ModConfigSpec.BooleanValue COMMAND_CONFIRM_STATE_CHANGES =
+            inner.comment("AI 对可能改变玩家、世界或服务器状态的命令先要求确认")
+                .define("safety.confirm_state_changes", true);
     public static final ModConfigSpec.ConfigValue<String> COMMAND_BLACKLIST =
             inner.comment("AI 禁止执行的命令前缀，逗号分隔")
                 .define("safety.command_blacklist", "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on");
+
+    // === Optional Client Integrations ===
+    public static final ModConfigSpec.BooleanValue TERMINAL_DEPOSIT_INCLUDE_HOTBAR =
+            inner.comment("虚无终端一键存入是否包含热键栏；默认保护热键栏")
+                .define("integration.nihility_terminal.include_hotbar", false);
+    public static final ModConfigSpec.BooleanValue TERMINAL_DEPOSIT_SKIP_DAMAGED =
+            inner.comment("虚无终端一键存入时跳过可损坏物品")
+                .define("integration.nihility_terminal.skip_damaged_items", true);
+    public static final ModConfigSpec.BooleanValue TERMINAL_DEPOSIT_SKIP_ENCHANTED =
+            inner.comment("虚无终端一键存入时跳过附魔物品")
+                .define("integration.nihility_terminal.skip_enchanted_items", true);
+    public static final ModConfigSpec.BooleanValue TERMINAL_DEPOSIT_SKIP_NAMED =
+            inner.comment("虚无终端一键存入时跳过自定义名称物品")
+                .define("integration.nihility_terminal.skip_named_items", true);
+    public static final ModConfigSpec.ConfigValue<String> TERMINAL_DEPOSIT_PROTECTED_ITEMS =
+            inner.comment("虚无终端一键存入额外保护的物品 ID，逗号分隔")
+                .define("integration.nihility_terminal.protected_items", "");
+
+    // === Client UI ===
+    public static final ModConfigSpec.BooleanValue SHOW_STARTUP_CONFIG =
+            inner.comment("启动时是否自动打开智能核心设置界面")
+                .define("ui.show_startup_config", true);
 
     public static final ModConfigSpec SPEC;
     static { SPEC = inner.build(); }
@@ -70,13 +100,21 @@ public class BuilderConfig implements ChatConfig {
     public String contextCompression = "truncate";
     public int memoryMaxMessages = 100;
     public int apiTimeoutMs = 300000;
-    public String knowledgePath = "config/xxsx_builder/knowledge";
+    public String knowledgePath = "config/xxsx_mc_smart_core/knowledge";
     public boolean buildAskClear = true;
     public int buildSpeed = -1;  // -1=未设置, 用blocks_per_tick
     public int blocksPerTick = 1000;
     public int maxVertices = 500000;
     public int defaultScale = 300;
+    public int worldHeightMultiplier = 1;
+    public boolean confirmStateChanges = true;
     public String commandBlacklist = "op,deop,ban-ip,ban,stop,kick,whitelist,pardon,debug,reload,save-all,save-off,save-on";
+    public boolean terminalDepositIncludeHotbar = false;
+    public boolean terminalDepositSkipDamagedItems = true;
+    public boolean terminalDepositSkipEnchantedItems = true;
+    public boolean terminalDepositSkipNamedItems = true;
+    public String terminalDepositProtectedItems = "";
+    public boolean showStartupConfig = true;
 
     /** 游戏内运行时覆盖的模型名（/ai model 设置） */
     public String runtimeModel = "";
@@ -103,14 +141,17 @@ public class BuilderConfig implements ChatConfig {
         c.blocksPerTick = BLOCKS_PER_TICK.get();
         c.maxVertices = MAX_VERTICES.get();
         c.defaultScale = DEFAULT_SCALE.get();
+        c.worldHeightMultiplier = WORLD_HEIGHT_MULTIPLIER.get();
+        c.confirmStateChanges = COMMAND_CONFIRM_STATE_CHANGES.get();
         c.commandBlacklist = COMMAND_BLACKLIST.get();
+        c.terminalDepositIncludeHotbar = TERMINAL_DEPOSIT_INCLUDE_HOTBAR.get();
+        c.terminalDepositSkipDamagedItems = TERMINAL_DEPOSIT_SKIP_DAMAGED.get();
+        c.terminalDepositSkipEnchantedItems = TERMINAL_DEPOSIT_SKIP_ENCHANTED.get();
+        c.terminalDepositSkipNamedItems = TERMINAL_DEPOSIT_SKIP_NAMED.get();
+        c.terminalDepositProtectedItems = TERMINAL_DEPOSIT_PROTECTED_ITEMS.get();
+        c.showStartupConfig = SHOW_STARTUP_CONFIG.get();
         if (com.xxsx.builder.XxsxBuilder.getInstance() != null) {
             com.xxsx.builder.XxsxBuilder.getInstance().getConfig().apply(c);
-            // build_speed.txt 优先级高于 TOML（/ai build speed 持久化值）
-            int savedSpeed = com.xxsx.builder.command.AICommand.loadBuildSpeed();
-            if (savedSpeed > 0) {
-                com.xxsx.builder.XxsxBuilder.getInstance().getConfig().buildSpeed = savedSpeed;
-            }
         }
     }
 
@@ -130,7 +171,15 @@ public class BuilderConfig implements ChatConfig {
         this.blocksPerTick = other.blocksPerTick;
         this.maxVertices = other.maxVertices;
         this.defaultScale = other.defaultScale;
+        this.worldHeightMultiplier = other.worldHeightMultiplier;
+        this.confirmStateChanges = other.confirmStateChanges;
         this.commandBlacklist = other.commandBlacklist;
+        this.terminalDepositIncludeHotbar = other.terminalDepositIncludeHotbar;
+        this.terminalDepositSkipDamagedItems = other.terminalDepositSkipDamagedItems;
+        this.terminalDepositSkipEnchantedItems = other.terminalDepositSkipEnchantedItems;
+        this.terminalDepositSkipNamedItems = other.terminalDepositSkipNamedItems;
+        this.terminalDepositProtectedItems = other.terminalDepositProtectedItems;
+        this.showStartupConfig = other.showStartupConfig;
         // 不覆盖 runtimeModel
     }
 
@@ -184,10 +233,26 @@ public class BuilderConfig implements ChatConfig {
         this.contextMaxTokens = Math.max(1000, Math.min(contextMaxTokens, 1000000));
     }
 
+    public int worldHeightMultiplier() {
+        return worldHeightMultiplier;
+    }
+
+    public void setWorldHeightMultiplier(int multiplier) {
+        this.worldHeightMultiplier = Math.max(1, Math.min(multiplier, 16));
+    }
+
+    public boolean showStartupConfig() {
+        return showStartupConfig;
+    }
+
+    public void setShowStartupConfig(boolean show) {
+        this.showStartupConfig = show;
+    }
+
     /** 将当前 API 配置写回 TOML 文件 */
     public void saveToFile() {
         try {
-            var path = java.nio.file.Paths.get("config", "xxsx_builder-common.toml");
+            var path = java.nio.file.Paths.get("config", "xxsx_mc_smart_core-common.toml");
             java.nio.file.Files.createDirectories(path.getParent());
             java.nio.file.Files.writeString(path, buildTomlContent());
         } catch (Exception e) {
@@ -216,8 +281,20 @@ public class BuilderConfig implements ChatConfig {
             "\tblocks_per_tick = " + blocksPerTick + "\n" +
             "\tmax_vertices = " + maxVertices + "\n" +
             "\tdefault_scale = " + defaultScale + "\n" +
+            "\n[world]\n" +
+            "\t#世界高度倍率提示，1=原版384格；供兼容mod或新世界预设读取，不会单独修改旧世界高度\n" +
+            "\theight_multiplier = " + worldHeightMultiplier + "\n" +
             "\n[safety]\n" +
+            "\tconfirm_state_changes = " + confirmStateChanges + "\n" +
             "\tcommand_blacklist = \"" + commandBlacklist + "\"\n" +
+            "\n[integration.nihility_terminal]\n" +
+            "\tinclude_hotbar = " + terminalDepositIncludeHotbar + "\n" +
+            "\tskip_damaged_items = " + terminalDepositSkipDamagedItems + "\n" +
+            "\tskip_enchanted_items = " + terminalDepositSkipEnchantedItems + "\n" +
+            "\tskip_named_items = " + terminalDepositSkipNamedItems + "\n" +
+            "\tprotected_items = \"" + terminalDepositProtectedItems + "\"\n" +
+            "\n[ui]\n" +
+            "\tshow_startup_config = " + showStartupConfig + "\n" +
             "\n[knowledge]\n" +
             "\tpath = \"" + knowledgePath + "\"\n";
     }

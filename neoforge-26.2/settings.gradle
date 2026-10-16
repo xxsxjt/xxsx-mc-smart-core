@@ -4,4 +4,4 @@ pluginManagement {
         maven { url = 'https://maven.neoforged.net/releases' }
     }
 }
-rootProject.name = 'xxsx-builder-neoforge-26.2'
+rootProject.name = 'xxsx-mc-smart-core-neoforge-26.2'

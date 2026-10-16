@@ -3,6 +3,7 @@ package com.xxsx.builder.voxel;
 import com.xxsx.builder.XxsxBuilder;
 import com.xxsx.builder.ai.ChatSession;
 import com.xxsx.builder.config.BuilderConfig;
+import com.xxsx.builder.config.SmartCoreText;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -40,22 +41,26 @@ public class VoxelBuildManager {
     public void startBuild(String playerName, String filePath, float scale, CommandSourceStack source) {
         // 检查是否已有任务
         if (jobs.containsKey(playerName)) {
-            source.sendFailure(Component.literal("§c你已有正在执行的任务，使用 /ai stop 取消"));
+            source.sendFailure(SmartCoreText.message("build.task_active")
+                .withStyle(net.minecraft.ChatFormatting.RED));
             return;
         }
 
         Path path = Paths.get(filePath);
         if (!Files.exists(path)) {
-            source.sendFailure(Component.literal("§c文件不存在: " + filePath));
+            source.sendFailure(SmartCoreText.message("build.file_missing", filePath)
+                .withStyle(net.minecraft.ChatFormatting.RED));
             return;
         }
         String ext = filePath.toLowerCase();
         if (!ext.endsWith(".pmx") && !ext.endsWith(".obj")) {
-            source.sendFailure(Component.literal("§c仅支持 .pmx 和 .obj 格式"));
+            source.sendFailure(SmartCoreText.message("build.unsupported_format")
+                .withStyle(net.minecraft.ChatFormatting.RED));
             return;
         }
 
-        source.sendSuccess(() -> Component.literal("§e正在解析模型..."), false);
+        source.sendSuccess(() -> SmartCoreText.message("build.parsing")
+            .withStyle(net.minecraft.ChatFormatting.YELLOW), false);
 
         // 异步解析和体素化
         CompletableFuture<BuildJob> future = CompletableFuture.supplyAsync(() -> {
@@ -112,13 +117,14 @@ public class VoxelBuildManager {
 
         future.thenAcceptAsync(job -> {
             jobs.put(playerName, job);
-            source.sendSuccess(() -> Component.literal(
-                "§a开始生成! " + job.grid.width + "x" + job.grid.height + "x" + job.grid.depth
-                + " (约" + job.grid.filledCount + "方块, 首帧将提示清除区域)"), false);
+            source.sendSuccess(() -> SmartCoreText.message("build.starting",
+                job.grid.width, job.grid.height, job.grid.depth, job.grid.filledCount)
+                .withStyle(net.minecraft.ChatFormatting.GREEN), false);
         }, server);
 
         future.exceptionally(e -> {
-            source.sendFailure(Component.literal("§c" + e.getMessage()));
+            source.sendFailure(SmartCoreText.message("build.failed", e.getMessage())
+                .withStyle(net.minecraft.ChatFormatting.RED));
             return null;
         });
     }
@@ -135,7 +141,8 @@ public class VoxelBuildManager {
         if (job != null && job.clearState == 1) {
             job.clearState = 2; // → 清除中
             job.clearIndex = 0;
-            job.source.sendSuccess(() -> Component.literal("§a开始清除区域..."), false);
+            job.source.sendSuccess(() -> SmartCoreText.message("build.clear_started")
+                .withStyle(net.minecraft.ChatFormatting.GREEN), false);
             return true;
         }
         return false;
@@ -146,7 +153,8 @@ public class VoxelBuildManager {
         BuildJob job = jobs.get(playerName);
         if (job != null && job.clearState == 1) {
             job.clearState = 3; // → 已跳过
-            job.source.sendSuccess(() -> Component.literal("§7跳过清除，直接建造"), false);
+            job.source.sendSuccess(() -> SmartCoreText.message("build.clear_skipped")
+                .withStyle(net.minecraft.ChatFormatting.GRAY), false);
             return true;
         }
         return false;
@@ -157,8 +165,8 @@ public class VoxelBuildManager {
         BuildJob job = jobs.get(playerName);
         if (job != null && !job.finished) {
             job.buildSpeed = Math.max(10, Math.min(5000, speed));
-            job.source.sendSuccess(() -> Component.literal(
-                "§e建造速度: " + job.buildSpeed + "/tick (" + (job.buildSpeed*20) + "/秒)"), false);
+            job.source.sendSuccess(() -> SmartCoreText.message("build.speed", job.buildSpeed, job.buildSpeed * 20)
+                .withStyle(net.minecraft.ChatFormatting.YELLOW), false);
             return true;
         }
         return false;
@@ -204,13 +212,15 @@ public class VoxelBuildManager {
                     final int clearW = hw*2+1, clearH = grid.height, clearD = hd*2+1;
                     final int count = clearW * clearH * clearD;
                     job.clearTotal = count;
-                    net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
-                        "§e清除 " + clearW + "x" + clearH + "x" + clearD + " 区域(" + count + "方块)? ");
-                    net.minecraft.network.chat.MutableComponent yes = net.minecraft.network.chat.Component.literal("§a[ 是(Y) ]");
+                    net.minecraft.network.chat.MutableComponent msg = SmartCoreText.message("build.clear_prompt",
+                        clearW, clearH, clearD, count).copy().withStyle(net.minecraft.ChatFormatting.YELLOW);
+                    net.minecraft.network.chat.MutableComponent yes = SmartCoreText.message("build.clear_yes").copy()
+                        .withStyle(net.minecraft.ChatFormatting.GREEN);
                     yes.setStyle(yes.getStyle().withClickEvent(
                         new net.minecraft.network.chat.ClickEvent.RunCommand("/ai build y")));
                     msg.append(yes).append(" ");
-                    net.minecraft.network.chat.MutableComponent no = net.minecraft.network.chat.Component.literal("§c[ 否(N) ]");
+                    net.minecraft.network.chat.MutableComponent no = SmartCoreText.message("build.clear_no").copy()
+                        .withStyle(net.minecraft.ChatFormatting.RED);
                     no.setStyle(no.getStyle().withClickEvent(
                         new net.minecraft.network.chat.ClickEvent.RunCommand("/ai build n")));
                     msg.append(no);
@@ -236,13 +246,14 @@ public class VoxelBuildManager {
                     }
                     if (job.clearIndex % (speed * 20) == 0 || job.clearIndex >= job.clearTotal) {
                         int pct = job.clearIndex * 100 / Math.max(1, job.clearTotal);
-                        job.source.sendSuccess(() -> Component.literal(
-                            "§7清除: " + pct + "% (" + job.clearIndex + "/" + job.clearTotal + ", " + speed + "/tick)"), false);
+                        job.source.sendSuccess(() -> SmartCoreText.message("build.clearing_progress",
+                            pct, job.clearIndex, job.clearTotal, speed)
+                            .withStyle(net.minecraft.ChatFormatting.GRAY), false);
                     }
                     if (job.clearIndex >= job.clearTotal) {
                         job.clearState = 3; // → 已清除
-                        job.source.sendSuccess(() -> Component.literal(
-                            "§a清除完成: " + job.clearTotal + " 方块"), false);
+                        job.source.sendSuccess(() -> SmartCoreText.message("build.clear_complete", job.clearTotal)
+                            .withStyle(net.minecraft.ChatFormatting.GREEN), false);
                     }
                     return;
                 }
@@ -280,9 +291,9 @@ public class VoxelBuildManager {
                 int total = totalVoxels(grid);
                 if (job.placedCount >= total || job.nextIndex >= total) {
                     job.finished = true;
-                    job.source.sendSuccess(() -> Component.literal(
-                            "§a✅ 建筑完成！共 " + job.placedCount + " 个方块 | "
-                            + job.grid.width + "x" + job.grid.height + "x" + job.grid.depth), false);
+                    job.source.sendSuccess(() -> SmartCoreText.message("build.complete", job.placedCount,
+                            job.grid.width, job.grid.height, job.grid.depth)
+                            .withStyle(net.minecraft.ChatFormatting.GREEN), false);
                     // 反馈给 AI 会话，AI 可据此建议调整
                     var sm = XxsxBuilder.getInstance().getSessionManager();
                     if (sm != null) {
@@ -295,7 +306,8 @@ public class VoxelBuildManager {
                 } // end try
             } catch (Exception e) {
                 XxsxBuilder.LOGGER.error("[Build] 放置方块异常", e);
-                job.source.sendFailure(Component.literal("§c生成出错: " + e.getMessage()));
+                job.source.sendFailure(SmartCoreText.message("build.failed", e.getMessage())
+                    .withStyle(net.minecraft.ChatFormatting.RED));
                 job.finished = true;
             }
         }
@@ -362,8 +374,8 @@ public class VoxelBuildManager {
                             c++;
                         } catch (Exception ignored) {}
             final int cc = c;
-            source.sendSuccess(() -> net.minecraft.network.chat.Component.literal(
-                "§7已清除 " + cc + " 方块"), false);
+            source.sendSuccess(() -> SmartCoreText.message("build.area_cleared", cc)
+                .withStyle(net.minecraft.ChatFormatting.GRAY), false);
         }
 
         public BuildJob(String playerName, PMXModel model, Voxelizer.VoxelGrid grid, CommandSourceStack source) {

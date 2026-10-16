@@ -20,13 +20,32 @@ neoForge {
     }
 
     mods {
-        xxsx_builder {
+        xxsx_mc_smart_core {
             sourceSet sourceSets.main
+        }
+        xxsx_builder {
+            sourceSet sourceSets.modelImport
         }
     }
 }
 
 sourceSets.main.java.srcDirs = ['src/main/java', '../common/src/main/java']
+sourceSets.main.java.exclude 'com/xxsx/builder/voxel/**'
+
+sourceSets {
+    modelImport {
+        java.srcDirs = ['src/modelImport/java', 'src/main/java', '../common/src/main/java']
+        java.include 'com/xxsx/builder/modelimport/ModelImportHandler.java'
+        java.include 'com/xxsx/builder/modelimport/ModelImportMod.java'
+        java.include 'com/xxsx/builder/voxel/**'
+        resources.srcDirs = ['src/modelImport/resources']
+    }
+}
+
+sourceSets.modelImport.compileClasspath += sourceSets.main.output
+sourceSets.modelImport.runtimeClasspath += sourceSets.main.output
+sourceSets.modelImport.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.modelImport.runtimeClasspath += sourceSets.main.runtimeClasspath
 
 dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
@@ -35,7 +54,7 @@ dependencies {
 jar {
     manifest {
         attributes([
-            "Specification-Title"     : "xxsx_builder",
+            "Specification-Title"     : "xxsx-mc-smart-core",
             "Specification-Vendor"    : "xxsx",
             "Specification-Version"   : "1",
             "Implementation-Title"    : project.name,
@@ -45,6 +64,29 @@ jar {
         ])
     }
 }
+
+tasks.named('jar') {
+    archiveBaseName = 'xxsx-mc-smart-core-neoforge-1.21.11'
+}
+
+tasks.register('modelImportJar', Jar) {
+    archiveBaseName = 'xxsx-mc-model-import-neoforge-1.21.11'
+    archiveVersion = project.version
+    from sourceSets.modelImport.output
+    dependsOn tasks.named('modelImportClasses')
+    manifest {
+        attributes([
+            'Specification-Title': 'xxsx-mc-model-import',
+            'Specification-Vendor': 'xxsx',
+            'Specification-Version': '1',
+            'Implementation-Title': 'xxsx-mc-model-import-neoforge-1.21.11',
+            'Implementation-Version': project.version,
+            'Implementation-Vendor': 'xxsx'
+        ])
+    }
+}
+
+tasks.named('build') { dependsOn tasks.named('modelImportJar') }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

@@ -1,10 +1,10 @@
 # xxsx-mc-smart-core
 
-xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
+xxsx 的智能核心 — Minecraft 多版本客户端智能辅助模组。
 
-当前 GitHub Release `neoforge-26.2-v1.1.5` 只更新并验证 MC 26.2 / NeoForge 26.2.0.7-beta 的客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.11 仍停留在上一轮 v1.1.1，NeoForge 1.21.1 未测试、未发布。
+当前 26.2 待发布版本 `neoforge-26.2-v1.1.11` 只更新并验证 MC 26.2 / NeoForge 26.2.0.7-beta 的客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.11 仍停留在上一轮 v1.1.1，NeoForge 1.21.1 未测试、未发布。
 
-当前本地 26.2 模块已追加背包/容器辅助、虚无终端收入联动、AI 工具结果自动回灌与便携分类指令查询，版本为 v1.1.5；本轮没有更新 Forge 1.20.1 和 NeoForge 1.21.11。
+当前本地 26.2 模块新增中英文 AI system prompt、按游戏语言自动切换的模型回答与知识摘要，以及运行时基础注册表查询能力，版本为 v1.1.11；物品、方块、实体、状态效果、药水、附魔、结构和生物群系均先查当前实例的精确注册 ID。本轮没有更新 Forge 1.20.1 和 NeoForge 1.21.11。v1.1.11 保持 26.2 身份命名：modid 使用合法下划线形态 `xxsx_mc_smart_core`，jar 文件名按仓库名使用 `xxsx-mc-smart-core`。
 
 ## 功能
 
@@ -14,13 +14,15 @@ xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
 | `/ai build <PMX路径>` | 解析 PMX 模型 → 体素建筑，`/ai <倍数>` 确认比例 |
 | `/ai api/model` | 切换 AI 供应商和模型 |
 | `/ai addmodel` | 添加个人 API 密钥 |
-| `[CMD]` 标签 | AI 输出指令自动执行并反馈结果 |
-| `[QUERY]` 标签 | 查询游戏状态（物品/方块/实体/配方/世界） |
-| 联动指令库 | 查询可执行联动模板，如 Curios 槽位命令 |
+| `[CMD]` 标签 | AI 输出指令自动执行；状态变更命令先等待玩家确认 |
+| `[QUERY]` 标签 | 查询游戏状态、运行时注册表（物品/方块/实体/状态效果/附魔/结构等）、配方与世界 |
+| 联动动作目录 | 分类查询 Curios、虚无终端、Earth Human、地球工业、超凡与 JEI 入口 |
 | `[KNOWLEDGE]` 标签 | 查询知识库（支持 jar 内置 + 外置扩展） |
 | 会话持久化 | 同一玩家重连保留对话历史 |
 | 上下文压缩 | 超限自动截断或 AI 总结 |
 | PlayerConfig | 每玩家独立 API 配置 |
+| 中英文 AI 回复 | 随游戏语言自动选择中文或英文 system prompt；知识库摘要同样跟随 |
+| `[QUERY]registry` | 直接扫描运行时基础注册表 ID，优先为 `/give`、`/summon`、`/effect`、`/locate` 等查找精确目标 |
 
 ## 快速开始
 
@@ -42,7 +44,7 @@ xxsx的智能核心 — Minecraft 多版本客户端建筑辅助模组。
 
 ## 配置
 
-主配置文件：`config/xxsx_builder-common.toml`
+主配置文件：`config/xxsx_mc_smart_core-common.toml`
 
 ```toml
 [ai]
@@ -60,6 +62,19 @@ ask_clear = true            # 建造前询问清除区域
 speed = -1                  # -1=使用 blocks_per_tick，或 /ai build speed 持久化
 blocks_per_tick = 1000      # 20000 方块/秒
 default_scale = 300
+
+[world]
+height_multiplier = 1       # 世界高度倍率提示；不单独修改旧世界高度
+
+[safety]
+confirm_state_changes = true # AI 改动玩家/世界/服务器前要求 /ai y 确认
+
+[integration.nihility_terminal]
+include_hotbar = false       # 默认不收入热键栏
+skip_damaged_items = true
+skip_enchanted_items = true
+skip_named_items = true
+protected_items = ""         # 额外保护的物品 ID，逗号分隔
 ```
 
 ## 依赖 / 版本对应
@@ -68,14 +83,14 @@ default_scale = 300
 |---|---|---|---|
 | MC 1.20.1 | Forge 47.2.0+ | v1.1.0 | 本轮未更新 |
 | MC 1.21.11 | NeoForge 21.11.42 | v1.1.1 | 上一轮已发布，本轮未更新 |
-| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.5 | 本地背包/容器辅助、虚无终端收入联动、AI 工具链更新，已构建/部署/hash 验证；背包菜单崩溃热修 |
+| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.11 | 中英文 AI 回复、语言自适应知识摘要与运行时基础注册表查询 |
 
 NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
 ## 技术栈
 
-- Java 17
-- ForgeGradle 6.x / Gradle 8.8
+- Java 17 / 21 / 25，按目标 MC 版本独立构建
+- ForgeGradle 6.x / ModDevGradle 2.x，按子工程隔离
 - OpenAI 兼容 API（Agnes / DeepSeek / 自定义）
 - PMX 2.0 二进制解析
 - JOML 向量数学
@@ -87,9 +102,9 @@ NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
-## 当前状态 (2026-07-07)
+## 当前状态 (2026-07-18)
 
-v1.1.5-26.2 — MC 26.2 NeoForge 客户端辅助新增背包/容器整理转移、虚无终端收入联动、AI 工具结果自动回灌与分类指令查询，并修复原版背包 `InventoryMenu.getType()` 崩溃。
+v1.1.11-26.2 — MC 26.2 NeoForge 客户端辅助运行时注册表版，jar 文件名为 `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar`；模型会优先用 `[QUERY]registry <类型> <命名空间/关键词>` 或对应快捷写法扫描当前实例的物品、方块、实体、状态效果、药水、附魔、结构和生物群系精确 ID，再生成对应原版命令，不再先依赖联动文档或源码枚举目标。
 
 上一轮 GitHub Release 为 v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 26.2）。
 
@@ -101,12 +116,12 @@ v1.1.5-26.2 — MC 26.2 NeoForge 客户端辅助新增背包/容器整理转移�
 |---------|--------|----------|----------|----------|--------|
 | `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.0 | 本轮未更新 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
 | `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.1 | 上一轮已发布，本轮未更新 | `xxsx-builder-neoforge-1.21.11-1.1.1.jar` |
-| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.5 | 本地背包/容器辅助与 AI 工具链更新，已构建/部署/hash 验证；背包菜单崩溃热修 | `xxsx-builder-neoforge-26.2-1.1.5.jar` |
+| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.11 | 运行时基础注册表查询与双语模型回复，modid `xxsx_mc_smart_core` | `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar` |
 
 ### 项目结构
 
 ```text
-xxsx_builder/
+xxsx-mc-smart-core/
 ├── common/                # 共享 Java 逻辑
 ├── forge-1.20.1/          # Forge 1.20.1 独立子工程
 ├── neoforge-1.21.11/      # NeoForge 1.21.11 独立子工程
@@ -143,10 +158,11 @@ xxsx_builder/
 
 已实现：
 - `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
-- `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）
-- `[QUERY]commands` / `[QUERY]curios` 联动指令库，支持 Curios 槽位命令模板
+- `[QUERY]` 游戏状态查询（player/block/item/recipe/nearby/world/mods/file/pmx）和运行时注册表查询（items/blocks/entities/effects/potions/enchantments/structures/biomes）
+- `[QUERY]commands` 联动动作目录，覆盖 Curios、虚无终端、Earth Human、地球工业、魔法、玄幻与 JEI 导航
 - `[KNOWLEDGE]` 知识库（jar 内置 ftbquests/bloodmagic，外置可扩展）
-- `[CMD]` 指令自动执行，错误反馈给 AI
+- `[CMD]` 指令自动执行，状态变更命令等待 `/ai y` 或 `/ai confirm` 后执行
+- 虚无终端一键存入默认保护热键栏、耐久/附魔/自定义名称物品，并支持额外物品 ID 保护列表
 - PMX 体素建筑：逐体素 UV 纹理采样 + 超采样抗锯齿 + CIELAB 107 色匹配
 - PNG + TGA 纹理自动识别加载
 - 浮点倍数 `/ai 2.5`，脚底对齐放置
@@ -165,7 +181,7 @@ xxsx
 
 ## 知识库
 
-内置知识库会随各版本模块一起打包，外置覆盖路径仍为 `config/xxsx_builder/knowledge/`。
+内置知识库会随各版本模块一起打包，外置覆盖路径仍为 `config/xxsx_mc_smart_core/knowledge/`。
 
 当前内置资源目录：
 - `forge-1.20.1/src/main/resources/knowledge/`
@@ -173,7 +189,7 @@ xxsx
 - `neoforge-26.2/src/main/resources/knowledge/`
 
 外置覆盖目录：
-- `config/xxsx_builder/knowledge/`
+- `config/xxsx_mc_smart_core/knowledge/`
 
 ```text
 knowledge/
@@ -185,4 +201,4 @@ knowledge/
 维护约定：
 - 新增共享 Java 逻辑优先放 `common/`
 - 新增内置知识库内容时，要同步三个目标版本模块的 `src/main/resources/knowledge/`
-- 用户自定义/扩展文档优先放外置 `config/xxsx_builder/knowledge/`
+- 用户自定义/扩展文档优先放外置 `config/xxsx_mc_smart_core/knowledge/`

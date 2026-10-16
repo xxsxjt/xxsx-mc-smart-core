@@ -42,6 +42,10 @@ public class KnowledgeBase {
         Map.entry("lootr", "exploration"),
         Map.entry("shogi", "exploration"),
         Map.entry("earth_online", "projectmods"),
+        Map.entry("earth_on_minecraft", "projectmods"),
+        Map.entry("earth_human", "projectmods"),
+        Map.entry("earth_online_magic", "projectmods"),
+        Map.entry("earth_online_xuanhuan", "projectmods"),
         Map.entry("templenihility", "projectmods")
     );
     private static final Map<String, List<String>> BUILTIN_DOCS = Map.ofEntries(
@@ -76,7 +80,7 @@ public class KnowledgeBase {
 
     private static String readExternal(String kbName) {
         String root = XxsxBuilder.getInstance() != null
-            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_builder/knowledge";
+            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_mc_smart_core/knowledge";
         Path dir = Paths.get(root, kbName);
         if (!Files.isDirectory(dir)) return null;
         return readDir(dir, kbName, "外置");
@@ -98,7 +102,7 @@ public class KnowledgeBase {
         String topic = resolveTopic(requested);
         if (readLiveKnowledge(topic) != null) return "实时/生成型联动知识";
         String root = XxsxBuilder.getInstance() != null
-            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_builder/knowledge";
+            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_mc_smart_core/knowledge";
         if (Files.isDirectory(Paths.get(root, requested))) return "外置联动文档";
         if (Files.isDirectory(Paths.get(root, topic))) return "外置联动文档";
         if (BUILTIN_DOCS.containsKey(topic)) return isCoreTopic(topic) ? "内置核心知识" : "内置联动文档";
@@ -186,7 +190,7 @@ public class KnowledgeBase {
         names.addAll(BUILTIN_DOCS.keySet());
         names.addAll(TOPIC_ALIASES.keySet());
         String root = XxsxBuilder.getInstance() != null
-            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_builder/knowledge";
+            ? XxsxBuilder.getInstance().getConfig().knowledgePath : "config/xxsx_mc_smart_core/knowledge";
         Path dir = Paths.get(root);
         if (Files.isDirectory(dir)) {
             try { Files.list(dir).filter(Files::isDirectory).map(p -> p.getFileName().toString()).forEach(names::add); }
@@ -232,8 +236,9 @@ public class KnowledgeBase {
                 result.append("\n").append(content).append("\n");
                 if (source != null) {
                     String desc = describeTopic(kbName);
-                    source.sendSuccess(() -> Component.literal("§7[知识库] 已加载: " + kbName
-                        + (desc == null ? "" : " (" + desc + ")")), false);
+                    source.sendSuccess(() -> SmartCoreText.message("knowledge.loaded", kbName,
+                        desc == null ? "" : " (" + desc + ")")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY), false);
                 }
             } else {
                 var avail = listKnowledgeBases();

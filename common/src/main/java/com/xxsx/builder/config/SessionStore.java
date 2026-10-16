@@ -13,11 +13,11 @@ import java.util.*;
 
 /**
  * 会话持久化 — 同一世界同一玩家重连后保留对话记录。
- * 数据存于 config/xxsx_builder_sessions.json
+ * 数据存于 config/xxsx_mc_smart_core_sessions.json
  */
 public class SessionStore {
     private static final Logger LOGGER = LoggerFactory.getLogger(SessionStore.class);
-    private static final Path FILE = Paths.get("config", "xxsx_builder_sessions.json");
+    private static final Path FILE = Paths.get("config", "xxsx_mc_smart_core_sessions.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     /** 每个玩家的会话记录 */

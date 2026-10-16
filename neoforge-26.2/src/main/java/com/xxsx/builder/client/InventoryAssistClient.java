@@ -1,5 +1,8 @@
 package com.xxsx.builder.client;
 
+import com.xxsx.builder.XxsxBuilder;
+import com.xxsx.builder.config.BuilderConfig;
+import com.xxsx.builder.config.SmartCoreText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -8,7 +11,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -25,9 +27,8 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -50,21 +51,17 @@ public final class InventoryAssistClient {
 
         AbstractContainerMenu menu = containerScreen.getMenu();
         if (isNihilityTerminalMenu(menu)) {
-            addButtonRow(event, screen, menu, List.of(
-                new ButtonSpec("◆", "一键收入背包到虚无终端", button -> depositPlayerInventoryToTerminal(menu, true))
-            ));
-            if (pendingTerminalDepositDelay < 0) {
-                return;
+            if (pendingTerminalDepositDelay >= 0) {
+                pendingTerminalDepositDelay = Math.max(2, pendingTerminalDepositDelay);
             }
-            pendingTerminalDepositDelay = Math.max(2, pendingTerminalDepositDelay);
             return;
         }
 
         if (menu instanceof InventoryMenu) {
             List<ButtonSpec> buttons = new ArrayList<>();
-            buttons.add(new ButtonSpec("⇅", "整理背包主体，不移动快捷栏", button -> sortPlayerInventory(menu)));
-            if (hasUsableNihilityTerminal()) {
-                buttons.add(new ButtonSpec("◆", "打开虚无终端并收入背包", button -> openTerminalAndDeposit()));
+            if (hasEquippedNihilityTerminal()) {
+                buttons.add(new ButtonSpec("◆", SmartCoreText.message("inventory.button.inventory"),
+                    button -> openTerminalAndDeposit()));
             }
             addButtonRow(event, screen, menu, buttons);
             return;
@@ -72,11 +69,9 @@ public final class InventoryAssistClient {
 
         if (isPortableStorageMenu(menu)) {
             List<ButtonSpec> buttons = new ArrayList<>();
-            buttons.add(new ButtonSpec("⇅", "整理当前容器", button -> sortContainer(menu)));
-            buttons.add(new ButtonSpec("↓", "收取容器到背包", button -> quickMoveContainerToPlayer(menu)));
-            buttons.add(new ButtonSpec("↑", "存入背包到容器", button -> quickMovePlayerToContainer(menu)));
-            if (hasUsableNihilityTerminal()) {
-                buttons.add(new ButtonSpec("◆", "收取当前容器后收入虚无终端", button -> collectContainerAndOpenTerminal(menu)));
+            if (hasEquippedNihilityTerminal()) {
+                buttons.add(new ButtonSpec("◆", SmartCoreText.message("inventory.button.container"),
+                    button -> collectContainerAndOpenTerminal(menu)));
             }
             addButtonRow(event, screen, menu, buttons);
         }
@@ -104,7 +99,7 @@ public final class InventoryAssistClient {
         if (++pendingTerminalDepositTries > 80) {
             pendingTerminalDepositDelay = -1;
             pendingTerminalDepositTries = 0;
-            clientMessage("未能打开虚无终端，确认终端已绑定并且当前维度正确。");
+            clientMessage(SmartCoreText.message("inventory.terminal_unavailable"));
         } else {
             pendingTerminalDepositDelay = 1;
         }
@@ -124,10 +119,10 @@ public final class InventoryAssistClient {
         }
     }
 
-    private static Button iconButton(int x, int y, String icon, String tooltip, Consumer<Button> action) {
+    private static Button iconButton(int x, int y, String icon, Component tooltip, Consumer<Button> action) {
         return Button.builder(Component.literal(icon), action::accept)
             .bounds(x, y, BUTTON_SIZE, BUTTON_SIZE)
-            .tooltip(Tooltip.create(Component.literal(tooltip)))
+            .tooltip(Tooltip.create(tooltip))
             .build();
     }
 
@@ -145,101 +140,14 @@ public final class InventoryAssistClient {
         return menu instanceof ChestMenu || menu instanceof ShulkerBoxMenu || menu instanceof HopperMenu;
     }
 
-    private static void sortPlayerInventory(AbstractContainerMenu menu) {
-        sortSlots(menu, getPlayerStorageSlots(menu, false), "背包主体已整理。");
-    }
-
-    private static void sortContainer(AbstractContainerMenu menu) {
-        sortSlots(menu, getContainerSlots(menu), "当前容器已整理。");
-    }
-
-    private static void sortSlots(AbstractContainerMenu menu, List<Slot> slots, String doneMessage) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || !ensureCursorEmpty(menu)) {
-            return;
-        }
-        if (slots.size() < 2) {
-            return;
-        }
-
-        List<ItemStack> desired = slots.stream()
-            .map(slot -> slot.getItem().copy())
-            .filter(stack -> !stack.isEmpty())
-            .sorted(InventoryAssistClient::compareStacks)
-            .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-        while (desired.size() < slots.size()) {
-            desired.add(ItemStack.EMPTY);
-        }
-
-        List<ItemStack> current = slots.stream()
-            .map(slot -> slot.getItem().copy())
-            .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-
-        int clicks = 0;
-        for (int i = 0; i < slots.size(); i++) {
-            if (ItemStack.matches(current.get(i), desired.get(i))) {
-                continue;
-            }
-            int source = findMatchingStack(current, desired.get(i), i + 1);
-            if (source < 0) {
-                continue;
-            }
-            Slot sourceSlot = slots.get(source);
-            Slot targetSlot = slots.get(i);
-            clickSlot(menu, sourceSlot, 0, ContainerInput.PICKUP);
-            clickSlot(menu, targetSlot, 0, ContainerInput.PICKUP);
-            clickSlot(menu, sourceSlot, 0, ContainerInput.PICKUP);
-            ItemStack oldTarget = current.get(i);
-            current.set(i, current.get(source));
-            current.set(source, oldTarget);
-            clicks += 3;
-        }
-
-        if (clicks > 0) {
-            clientMessage(doneMessage);
-        }
-    }
-
-    private static int compareStacks(ItemStack left, ItemStack right) {
-        Identifier leftId = BuiltInRegistries.ITEM.getKey(left.getItem());
-        Identifier rightId = BuiltInRegistries.ITEM.getKey(right.getItem());
-        return Comparator
-            .comparing((ItemStack stack) -> BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace())
-            .thenComparing(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath())
-            .thenComparing(stack -> stack.getHoverName().getString().toLowerCase(Locale.ROOT))
-            .thenComparing(stack -> stack.getComponentsPatch().toString())
-            .thenComparing(Comparator.comparingInt(ItemStack::getCount).reversed())
-            .compare(leftId == null ? ItemStack.EMPTY : left, rightId == null ? ItemStack.EMPTY : right);
-    }
-
-    private static int findMatchingStack(List<ItemStack> current, ItemStack desired, int start) {
-        for (int i = start; i < current.size(); i++) {
-            if (ItemStack.matches(current.get(i), desired)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static void quickMoveContainerToPlayer(AbstractContainerMenu menu) {
-        int moved = quickMoveSlots(menu, getContainerSlots(menu), false);
-        if (moved > 0) {
-            clientMessage("已收取当前容器可移动物品。");
-        }
-    }
-
-    private static void quickMovePlayerToContainer(AbstractContainerMenu menu) {
-        int moved = quickMoveSlots(menu, getPlayerStorageSlots(menu, true), false);
-        if (moved > 0) {
-            clientMessage("已存入背包可移动物品。");
-        }
-    }
-
     private static void collectContainerAndOpenTerminal(AbstractContainerMenu menu) {
         if (!ensureCursorEmpty(menu)) {
             return;
         }
-        quickMoveSlots(menu, getContainerSlots(menu), false);
+        MoveResult result = quickMoveSlots(menu, getContainerSlots(menu));
+        if (result.protectedSlots() > 0) {
+            clientMessage(SmartCoreText.message("inventory.protected_container", result.protectedSlots()));
+        }
         openTerminalAndDeposit();
     }
 
@@ -251,30 +159,42 @@ public final class InventoryAssistClient {
         pendingTerminalDepositDelay = 6;
         pendingTerminalDepositTries = 0;
         minecraft.getConnection().sendCommand("nihility terminal");
-        clientMessage("正在打开虚无终端并收入背包物品。");
+        clientMessage(SmartCoreText.message("inventory.opening_terminal"));
     }
 
     private static void depositPlayerInventoryToTerminal(AbstractContainerMenu menu, boolean showMessage) {
-        int moved = quickMoveSlots(menu, getPlayerStorageSlots(menu, true), true);
+        MoveResult result = quickMoveSlots(menu,
+            getPlayerStorageSlots(menu, config().terminalDepositIncludeHotbar));
         if (showMessage) {
-            clientMessage(moved > 0 ? "已尝试收入背包物品到虚无终端。" : "没有可收入的背包物品。");
+            Component text = result.movedSlots() > 0
+                ? SmartCoreText.message("inventory.deposit_complete", result.movedSlots())
+                : SmartCoreText.message("inventory.deposit_empty");
+            if (result.protectedSlots() > 0) {
+                text = SmartCoreText.message("inventory.deposit_with_protected", text, result.protectedSlots());
+            }
+            clientMessage(text);
         }
     }
 
-    private static int quickMoveSlots(AbstractContainerMenu menu, List<Slot> slots, boolean skipNihilityTerminal) {
+    private static MoveResult quickMoveSlots(AbstractContainerMenu menu, List<Slot> slots) {
         if (!ensureCursorEmpty(menu)) {
-            return 0;
+            return MoveResult.EMPTY;
         }
         int moved = 0;
+        int protectedSlots = 0;
         for (Slot slot : new ArrayList<>(slots)) {
             ItemStack stack = slot.getItem();
-            if (stack.isEmpty() || (skipNihilityTerminal && isNihilityTerminal(stack))) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (isProtectedFromTerminalDeposit(stack)) {
+                protectedSlots++;
                 continue;
             }
             clickSlot(menu, slot, 0, ContainerInput.QUICK_MOVE);
             moved++;
         }
-        return moved;
+        return new MoveResult(moved, protectedSlots);
     }
 
     private static List<Slot> getContainerSlots(AbstractContainerMenu menu) {
@@ -309,15 +229,15 @@ public final class InventoryAssistClient {
 
     private static boolean isPlayerStorageSlot(Slot slot, boolean includeHotbar) {
         int containerSlot = slot.getContainerSlot();
-        return containerSlot >= 9 && containerSlot < 36
-            || includeHotbar && containerSlot >= 0 && containerSlot < 9;
+        return (containerSlot >= 9 && containerSlot < 36)
+            || (includeHotbar && containerSlot >= 0 && containerSlot < 9);
     }
 
     private static boolean ensureCursorEmpty(AbstractContainerMenu menu) {
         if (menu.getCarried().isEmpty()) {
             return true;
         }
-        clientMessage("请先放下鼠标上的物品。");
+        clientMessage(SmartCoreText.message("inventory.cursor_not_empty"));
         return false;
     }
 
@@ -329,17 +249,10 @@ public final class InventoryAssistClient {
         minecraft.gameMode.handleContainerInput(menu.containerId, slot.index, button, input, minecraft.player);
     }
 
-    private static boolean hasUsableNihilityTerminal() {
+    private static boolean hasEquippedNihilityTerminal() {
         Player player = Minecraft.getInstance().player;
         if (player == null || !isNihilityTerminalRegistered()) {
             return false;
-        }
-
-        Container inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            if (isNihilityTerminal(inventory.getItem(slot))) {
-                return true;
-            }
         }
         return hasCuriosNihilityTerminal(player);
     }
@@ -369,6 +282,36 @@ public final class InventoryAssistClient {
         return !stack.isEmpty() && NIHILITY_TERMINAL_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
+    private static boolean isProtectedFromTerminalDeposit(ItemStack stack) {
+        if (isNihilityTerminal(stack)) {
+            return true;
+        }
+        BuilderConfig config = config();
+        if (config.terminalDepositSkipDamagedItems && stack.isDamageableItem()) {
+            return true;
+        }
+        if (config.terminalDepositSkipEnchantedItems && stack.isEnchanted()) {
+            return true;
+        }
+        if (config.terminalDepositSkipNamedItems
+            && !stack.getHoverName().equals(stack.getItem().getName(stack))) {
+            return true;
+        }
+        String protectedItems = config.terminalDepositProtectedItems;
+        if (protectedItems == null || protectedItems.isBlank()) {
+            return false;
+        }
+        String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        return Arrays.stream(protectedItems.split(","))
+            .map(String::trim)
+            .filter(id -> !id.isEmpty())
+            .anyMatch(itemId::equals);
+    }
+
+    private static BuilderConfig config() {
+        return XxsxBuilder.getInstance().getConfig();
+    }
+
     private static boolean isNihilityTerminalMenu(AbstractContainerMenu menu) {
         try {
             return NIHILITY_TERMINAL_MENU_ID.equals(BuiltInRegistries.MENU.getKey(menu.getType()));
@@ -377,14 +320,18 @@ public final class InventoryAssistClient {
         }
     }
 
-    private static void clientMessage(String text) {
+    private static void clientMessage(Component text) {
         Player player = Minecraft.getInstance().player;
         if (player != null) {
-            player.sendSystemMessage(Component.literal("[智能核心] " + text));
+            player.sendSystemMessage(SmartCoreText.message("inventory.prefix").copy().append(text));
         }
     }
 
-    private record ButtonSpec(String icon, String tooltip, Consumer<Button> action) {
+    private record MoveResult(int movedSlots, int protectedSlots) {
+        private static final MoveResult EMPTY = new MoveResult(0, 0);
+    }
+
+    private record ButtonSpec(String icon, Component tooltip, Consumer<Button> action) {
     }
 
     private InventoryAssistClient() {

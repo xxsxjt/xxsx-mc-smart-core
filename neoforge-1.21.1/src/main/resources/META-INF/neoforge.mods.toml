@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="AGPL-3.0"
+
+[[mods]]
+modId="xxsx_builder"
+version="1.1.0"
+displayName="xxsx Client Builder Assistant"
+logoFile="logo.png"
+description='''
+xxsx Client Builder Assistant.
+Client-side portable building helper for local client and singleplayer integrated server use.
+Dedicated server installation has no effect.
+'''
+authors="xxsx"
+
+[[dependencies.xxsx_builder]]
+modId="neoforge"
+type="required"
+versionRange="[21.1,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.xxsx_builder]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="CLIENT"

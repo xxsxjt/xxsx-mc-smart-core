@@ -188,5 +188,10 @@ public class SessionManager {
         return getSession(playerName).summarizeDocument(title, content);
     }
 
+    /** Allows a version-specific client surface to select the player-facing summary language. */
+    public String summarizeKnowledge(String playerName, String title, String content, String instruction) {
+        return getSession(playerName).summarizeDocument(title, content, instruction);
+    }
+
     public void setWorldName(String name) { this.worldName = name; }
 }

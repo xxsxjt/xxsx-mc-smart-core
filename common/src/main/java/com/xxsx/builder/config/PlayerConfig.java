@@ -12,11 +12,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 每个玩家的个人配置（API key、模型等），不依赖服务器配置。
- * 数据存于 config/xxsx_builder/players/<name>.json
+ * 数据存于 config/xxsx_mc_smart_core/players/<name>.json
  */
 public class PlayerConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(PlayerConfig.class);
-    private static final Path DIR = Paths.get("config", "xxsx_builder", "players");
+    private static final Path DIR = Paths.get("config", "xxsx_mc_smart_core", "players");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Map<String, PlayerConfig> cache = new ConcurrentHashMap<>();
 
