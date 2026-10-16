@@ -42,5 +42,9 @@ test_pmx.py
 temp/
 local/
 
+# Local scratch backups (working-tree only, never part of the mod)
+*.bak
+*.bak-*
+
 # IDE-opened guide
 浏览器操作指南.md
