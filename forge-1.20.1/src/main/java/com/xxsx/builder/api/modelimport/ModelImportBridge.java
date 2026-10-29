@@ -1,26 +1,19 @@
-package com.xxsx.builder.modelimport;
+package com.xxsx.builder.api.modelimport;
 
 import com.xxsx.builder.ai.ChatSession;
-import com.xxsx.builder.config.SmartCoreText;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 
 /** Optional bridge from Smart Core to the separately packaged model importer. */
 public final class ModelImportBridge {
     public interface Handler {
         boolean handleNumericInput(String input, CommandSourceStack source, ChatSession session);
-
         int handleBuildSpeed(CommandSourceStack source, String value);
-
         int handleBuildConfirm(CommandSourceStack source, boolean confirm);
-
         int handleBuildStop(CommandSourceStack source);
-
         int handleBuildCommand(String args, CommandSourceStack source, String playerName);
-
         String queryPMX(String filePath);
-
         boolean cancelBuild(String playerName);
-
         boolean hasActiveJob(String playerName);
     }
 
@@ -28,16 +21,10 @@ public final class ModelImportBridge {
 
     private ModelImportBridge() {}
 
-    public static void register(Handler value) {
-        handler = value;
-    }
+    public static void register(Handler value) { handler = value; }
 
     public static void unregister(Handler value) {
         if (handler == value) handler = null;
-    }
-
-    public static boolean isAvailable() {
-        return handler != null;
     }
 
     public static boolean handleNumericInput(String input, CommandSourceStack source, ChatSession session) {
@@ -48,36 +35,32 @@ public final class ModelImportBridge {
     public static int handleBuildSpeed(CommandSourceStack source, String value) {
         Handler current = handler;
         if (current != null) return current.handleBuildSpeed(source, value);
-        source.sendFailure(SmartCoreText.command("build.extension_missing"));
-        return 1;
+        return unavailable(source);
     }
 
     public static int handleBuildConfirm(CommandSourceStack source, boolean confirm) {
         Handler current = handler;
         if (current != null) return current.handleBuildConfirm(source, confirm);
-        source.sendFailure(SmartCoreText.command("build.extension_missing"));
-        return 1;
+        return unavailable(source);
     }
 
     public static int handleBuildStop(CommandSourceStack source) {
         Handler current = handler;
         if (current != null) return current.handleBuildStop(source);
-        source.sendFailure(SmartCoreText.command("build.extension_missing"));
-        return 1;
+        return unavailable(source);
     }
 
     public static int handleBuildCommand(String args, CommandSourceStack source, String playerName) {
         Handler current = handler;
         if (current != null) return current.handleBuildCommand(args, source, playerName);
-        source.sendFailure(SmartCoreText.command("build.extension_missing"));
-        return 1;
+        return unavailable(source);
     }
 
     public static String queryPMX(String filePath) {
         Handler current = handler;
         return current != null
             ? current.queryPMX(filePath)
-            : SmartCoreText.text("query.xxsx_mc_smart_core.pmx.extension_missing");
+            : "[xxsx] 模型导入扩展未安装，无法解析 PMX/OBJ。";
     }
 
     public static boolean cancelBuild(String playerName) {
@@ -88,5 +71,10 @@ public final class ModelImportBridge {
     public static boolean hasActiveJob(String playerName) {
         Handler current = handler;
         return current != null && current.hasActiveJob(playerName);
+    }
+
+    private static int unavailable(CommandSourceStack source) {
+        source.sendFailure(Component.literal("§c模型导入扩展未安装：请同时安装 xxsx-mc-model-import。"));
+        return 1;
     }
 }

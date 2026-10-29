@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="AGPL-3.0"
+
+[[mods]]
+modId="xxsx_builder"
+version="${file.jarVersion}"
+displayName="Xxsx Model Import"
+description='''
+Optional PMX/OBJ model importer and voxel building extension for Xxsx Smart Core.
+'''
+authors="xxsx"
+
+[[dependencies.xxsx_builder]]
+modId="xxsx_mc_smart_core"
+mandatory=true
+versionRange="[1.1.1,)"
+ordering="AFTER"
+side="CLIENT"
+
+[[dependencies.xxsx_builder]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.xxsx_builder]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="CLIENT"

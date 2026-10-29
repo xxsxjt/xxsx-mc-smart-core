@@ -25,7 +25,7 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Mod(value = XxsxBuilder.MODID, dist = Dist.CLIENT)
+@Mod(XxsxBuilder.MODID)
 public class XxsxBuilder {
     public static final String MODID = "xxsx_mc_smart_core";
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -155,16 +155,16 @@ public class XxsxBuilder {
         if (player == null || player.level().isClientSide()) return;
 
         player.displayClientMessage(Component.literal(
-            "[xxsx智能核心] v1.1.1 客户端辅助已装载 (MC 1.21.11)"), false);
+            "[xxsx智能核心] v1.1.2 客户端辅助已装载 (MC 1.21.11)"), false);
         player.displayClientMessage(Component.literal(
             "定位：客户端便携建筑辅助；专用服务端安装无效。"), false);
         boolean usingBuiltin = config.providerUrl.isEmpty();
         player.displayClientMessage(Component.literal(
             usingBuiltin
-                ? "当前使用开发者内置 API，多人共用可能卡顿。建议添加自己的模型:"
+                ? "当前使用内置 Kilo 免费模型（无需 Key，依次尝试 Beam → Auto → Flint）。建议添加自己的模型:"
                 : "当前使用自定义 API"), false);
         player.displayClientMessage(Component.literal(
-            "  获取 Agnes API Key: https://platform.agnes-ai.com/"), false);
+            "  免费模型额度不足时，可添加自己的模型："), false);
         player.displayClientMessage(Component.literal(
             "  获取 DeepSeek API Key: https://platform.deepseek.com/api_keys"), false);
         player.displayClientMessage(Component.literal(

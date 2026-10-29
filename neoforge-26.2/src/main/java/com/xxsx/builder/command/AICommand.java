@@ -13,7 +13,7 @@ import com.xxsx.builder.config.KnowledgeBase;
 import com.xxsx.builder.config.ModLogger;
 import com.xxsx.builder.config.PlayerConfig;
 import com.xxsx.builder.config.SmartCoreText;
-import com.xxsx.builder.modelimport.ModelImportBridge;
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;

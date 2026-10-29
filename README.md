@@ -2,16 +2,18 @@
 
 xxsx 的智能核心 — Minecraft 多版本客户端智能辅助模组。
 
-当前 26.2 待发布版本 `neoforge-26.2-v1.1.11` 只更新并验证 MC 26.2 / NeoForge 26.2.0.7-beta 的客户端 jar；Forge 1.20.1 仍停留在上一轮 v1.1.0，NeoForge 1.21.11 仍停留在上一轮 v1.1.1，NeoForge 1.21.1 未测试、未发布。
+当前 26.2 候选版本 `1.1.12` 面向 MC 26.2 / NeoForge 26.2.0.7-beta，包含 Smart Core 和可选的模型导入扩展两个独立 jar；模型导入功能需要 Smart Core `1.1.12` 或更新版本。源码修复已包含 JPMS split-package 修复，构建与客户端启动验证状态见本次验收记录。Forge 1.20.1（v1.1.1）、NeoForge 1.21.1（v1.1.1）和 NeoForge 1.21.11（v1.1.2）已同步到相同的双 jar 结构并全部构建通过。
 
-当前本地 26.2 模块新增中英文 AI system prompt、按游戏语言自动切换的模型回答与知识摘要，以及运行时基础注册表查询能力，版本为 v1.1.11；物品、方块、实体、状态效果、药水、附魔、结构和生物群系均先查当前实例的精确注册 ID。本轮没有更新 Forge 1.20.1 和 NeoForge 1.21.11。v1.1.11 保持 26.2 身份命名：modid 使用合法下划线形态 `xxsx_mc_smart_core`，jar 文件名按仓库名使用 `xxsx-mc-smart-core`。
+全部模块的默认 AI 通道统一为内置 Kilo 免费模型（`Beam → Auto → Flint` 依次回退），无需 API Key，按 IP 限速；也可在配置界面填写自己的 OpenAI 兼容 API。
+
+26.2 v1.1.12 保留 v1.1.11 的中英文 AI 回复、语言自适应知识摘要和运行时基础注册表查询，并修复 Smart Core 与模型导入扩展的 JPMS split-package 冲突。Smart Core (`xxsx_mc_smart_core`) 独立运行；可选的模型导入 mod (`xxsx_builder`) 依赖 Smart Core `>=1.1.12`，仅在需要 PMX/OBJ 模型导入和体素建造时安装。两个 jar 的 Java 包互不重叠。
 
 ## 功能
 
 | 功能 | 说明 |
 |------|------|
 | `/ai <消息>` | 自然语言 AI 对话，自动执行指令 |
-| `/ai build <PMX路径>` | 解析 PMX 模型 → 体素建筑，`/ai <倍数>` 确认比例 |
+| `/ai build <PMX路径>` | **需安装可选模型导入扩展**：解析 PMX 模型 → 体素建筑，`/ai <倍数>` 确认比例 |
 | `/ai api/model` | 切换 AI 供应商和模型 |
 | `/ai addmodel` | 添加个人 API 密钥 |
 | `[CMD]` 标签 | AI 输出指令自动执行；状态变更命令先等待玩家确认 |
@@ -40,7 +42,7 @@ xxsx 的智能核心 — Minecraft 多版本客户端智能辅助模组。
 - **CIELAB 颜色匹配**：107 种方块颜色数据库（混凝土/羊毛/陶瓦/玻璃/建筑方块），CIE76 色差最小匹配
 - **浮点倍数**：`/ai 2.5` 支持小数倍率精细控制
 - **异步构建**：ForkJoinPool 解析+体素化 → ServerTickEvent 分步放置
-- 示例：`/ai build "C:\模型.pmx"` → 输入 `/ai 3` 确认 3 倍
+- 示例（需安装可选模型导入扩展）：`/ai build "C:\模型.pmx"` → 输入 `/ai 3` 确认 3 倍
 
 ## 配置
 
@@ -48,7 +50,7 @@ xxsx 的智能核心 — Minecraft 多版本客户端智能辅助模组。
 
 ```toml
 [ai]
-provider_url = ""           # 留空使用内置 Agnes API
+provider_url = ""           # 留空使用内置 Kilo 免费模型（免 Key，按 IP 限速）
 provider_key = ""
 provider_model = ""
 
@@ -81,17 +83,18 @@ protected_items = ""         # 额外保护的物品 ID，逗号分隔
 
 | Minecraft | Loader | Mod 版本 | 本轮状态 |
 |---|---|---|---|
-| MC 1.20.1 | Forge 47.2.0+ | v1.1.0 | 本轮未更新 |
-| MC 1.21.11 | NeoForge 21.11.42 | v1.1.1 | 上一轮已发布，本轮未更新 |
-| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.11 | 中英文 AI 回复、语言自适应知识摘要与运行时基础注册表查询 |
+| MC 1.20.1 | Forge 47.2.0+ | v1.1.1 | 已迁移双 jar 结构并切换内置免费模型 |
+| MC 1.21.1 | NeoForge 21.1.138 | v1.1.1 | 已迁移双 jar 结构并切换内置免费模型 |
+| MC 1.21.11 | NeoForge 21.11.42 | v1.1.2 | 已迁移双 jar 结构并切换内置免费模型 |
+| MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.12 | Smart Core；可选模型导入扩展需同版本配套安装 |
 
-NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
+全部四个模块共用 `common/` 源码，默认 AI 通道统一为 Kilo 免费模型链（Beam → Auto → Flint），无需 API Key。
 
 ## 技术栈
 
 - Java 17 / 21 / 25，按目标 MC 版本独立构建
 - ForgeGradle 6.x / ModDevGradle 2.x，按子工程隔离
-- OpenAI 兼容 API（Agnes / DeepSeek / 自定义）
+- OpenAI 兼容 API（内置 Kilo 免费模型 / DeepSeek / 自定义）
 - PMX 2.0 二进制解析
 - JOML 向量数学
 - CIELAB 色彩空间
@@ -102,21 +105,24 @@ NeoForge 1.21.1 仅保留为本地试验模块，本轮未测试、未发布。
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
-## 当前状态 (2026-07-18)
+## 当前状态 (2026-10-28)
 
-v1.1.11-26.2 — MC 26.2 NeoForge 客户端辅助运行时注册表版，jar 文件名为 `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar`；模型会优先用 `[QUERY]registry <类型> <命名空间/关键词>` 或对应快捷写法扫描当前实例的物品、方块、实体、状态效果、药水、附魔、结构和生物群系精确 ID，再生成对应原版命令，不再先依赖联动文档或源码枚举目标。
+四个模块本轮全部构建通过。默认 AI 通道统一为内置 Kilo 免费模型（`Beam → Auto → Flint` 依次回退，无需 Key，按 IP 限速），配置界面与登录提示同步更新；`Agnes` 相关硬编码与链接已移除。
 
-上一轮 GitHub Release 为 v1.1.1-neoforge — NeoForge 客户端辅助专项更新（仅 MC 1.21.11 / MC 26.2）。
+v1.1.12-26.2 — MC 26.2 NeoForge 客户端辅助更新。Smart Core jar 为 `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar`；可选模型导入 jar 为 `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar`，依赖 Smart Core `>=1.1.12`。两包的 Java 包集合经构建后验证无交集。模型仍优先使用 `[QUERY]registry <类型> <命名空间/关键词>` 或对应快捷写法扫描当前运行时注册 ID。
 
-注意：这一轮没有更新 Forge 1.20.1；NeoForge 1.21.1 只保留为本地试验构建，未纳入已测试发布。
+本轮同时把 `forge-1.20.1`、`neoforge-1.21.1`、`neoforge-1.21.11` 补齐到与 26.2 相同的双 jar 结构（桥接 API 在 `com.xxsx.builder.api.modelimport`），修复了自 `a6d4bea` 起三个模块无法编译的问题。
 
 ### 支持版本 / 发布矩阵
 
 | 模块目录 | Loader | 目标版本 | Mod 版本 | 本轮状态 | 产物名 |
 |---------|--------|----------|----------|----------|--------|
-| `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.0 | 本轮未更新 | `xxsx-builder-forge-1.20.1-1.1.0.jar` |
-| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.1 | 上一轮已发布，本轮未更新 | `xxsx-builder-neoforge-1.21.11-1.1.1.jar` |
-| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.11 | 运行时基础注册表查询与双语模型回复，modid `xxsx_mc_smart_core` | `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar` |
+| `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.1 | 已构建 | `xxsx-mc-smart-core-forge-1.20.1-1.1.1.jar` + `xxsx-mc-model-import-forge-1.20.1-1.1.1.jar` |
+| `neoforge-1.21.1/` | NeoForge 21.1.138 | MC 1.21.1 | v1.1.1 | 已构建 | `xxsx-mc-smart-core-neoforge-1.21.1-1.1.1.jar` + `xxsx-mc-model-import-neoforge-1.21.1-1.1.1.jar` |
+| `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.2 | 已构建 | `xxsx-mc-smart-core-neoforge-1.21.11-1.1.2.jar` + `xxsx-mc-model-import-neoforge-1.21.11-1.1.2.jar` |
+| `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.12 | Smart Core `xxsx_mc_smart_core` + 可选模型导入扩展 `xxsx_builder` | `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar` + `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar` |
+
+已知限制：三个旧版本模块尚未执行客户端启动 smoke test。`forge-1.20.1`、`neoforge-1.21.1`、`neoforge-1.21.11` 的核心 jar 此前 `mods.toml` 声明 `xxsx_builder` 而 `@Mod` 使用 `xxsx_mc_smart_core`，两者不一致会导致加载器找不到 mod 主类；本轮已统一为 `xxsx_mc_smart_core`，并为 model-import jar 补齐 `mods.toml`/`neoforge.mods.toml`（此前该 jar 只有 `MANIFEST.MF`，无法被识别为独立 mod）。
 
 ### 项目结构
 
@@ -150,11 +156,12 @@ xxsx-mc-smart-core/
 
 ### 发布验证闭环
 
-1. 在对应模块执行 `./gradlew build --no-daemon --offline`
+1. 在对应模块执行 `./gradlew build --no-daemon --offline`；26.2 使用 Java 25
 2. 确认目标 jar 出现在各自 `build/libs/`
-3. 部署到目标实例 `mods/` 目录
-4. 启动游戏并检查日志无关键报错
-5. 执行关键命令 / 核心功能 smoke test（如 `/ai`、`/ai build`、`[KNOWLEDGE]`）
+3. 检查两个 26.2 jar 的 Java 包集合无交集，并核对 mod 元数据和依赖版本
+4. 部署到目标实例 `mods/` 目录
+5. 启动游戏并检查日志无关键报错
+6. 执行关键命令 / 核心功能 smoke test（如 `/ai`、安装模型导入扩展后的 `/ai build`、`[KNOWLEDGE]`）
 
 已实现：
 - `/ai` 自然语言 Agent 循环，AI 自主决策执行指令并反馈结果
@@ -163,10 +170,7 @@ xxsx-mc-smart-core/
 - `[KNOWLEDGE]` 知识库（jar 内置 ftbquests/bloodmagic，外置可扩展）
 - `[CMD]` 指令自动执行，状态变更命令等待 `/ai y` 或 `/ai confirm` 后执行
 - 虚无终端一键存入默认保护热键栏、耐久/附魔/自定义名称物品，并支持额外物品 ID 保护列表
-- PMX 体素建筑：逐体素 UV 纹理采样 + 超采样抗锯齿 + CIELAB 107 色匹配
-- PNG + TGA 纹理自动识别加载
-- 浮点倍数 `/ai 2.5`，脚底对齐放置
-- `/ai build speed` 持久化速度控制
+- 可选模型导入扩展：PMX/OBJ 体素建筑、逐体素 UV 纹理采样、超采样抗锯齿、CIELAB 107 色匹配、PNG/TGA 纹理加载、浮点倍数与脚底对齐、`/ai build speed` 持久化速度控制
 - 模型切换 `/ai api` + `/ai model` + `/ai addmodel`
 - 会话持久化 + 上下文自动压缩
 - 聊天折叠显示（悬停全文/点击复制）

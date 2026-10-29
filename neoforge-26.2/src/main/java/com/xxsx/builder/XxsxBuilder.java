@@ -6,7 +6,7 @@ import com.xxsx.builder.command.AICommand;
 import com.xxsx.builder.ai.CommandExecutor;
 import com.xxsx.builder.client.InventoryAssistClient;
 import com.xxsx.builder.config.BuilderConfig;
-import com.xxsx.builder.modelimport.ModelImportBridge;
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import com.xxsx.builder.config.ModConfigScreen;
 import com.xxsx.builder.config.SmartCoreText;
 import net.minecraft.client.Minecraft;
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Mod(value = XxsxBuilder.MODID, dist = Dist.CLIENT)
 public class XxsxBuilder {
     public static final String MODID = "xxsx_mc_smart_core";
-    public static final String MOD_VERSION = "1.1.11";
+    public static final String MOD_VERSION = "1.1.12";
     public static final Logger LOGGER = LogUtils.getLogger();
     private static final AtomicBoolean SHOWN_CONFIG = new AtomicBoolean(false);
 

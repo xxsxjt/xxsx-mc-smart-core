@@ -2,6 +2,7 @@ package com.xxsx.builder.modelimport;
 
 import com.xxsx.builder.XxsxBuilder;
 import com.xxsx.builder.ai.ChatSession;
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import com.xxsx.builder.config.SmartCoreText;
 import com.xxsx.builder.voxel.OBJModel;
 import com.xxsx.builder.voxel.OBJParser;

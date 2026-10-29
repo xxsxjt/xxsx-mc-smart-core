@@ -12,7 +12,7 @@ import com.xxsx.builder.config.ChatFold;
 import com.xxsx.builder.config.KnowledgeBase;
 import com.xxsx.builder.config.ModLogger;
 import com.xxsx.builder.config.PlayerConfig;
-import com.xxsx.builder.modelimport.ModelImportBridge;
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -82,7 +82,7 @@ public class AICommand {
                         .executes(ctx -> {
                             ctx.getSource().sendSuccess(() -> Component.literal(
                                 "§b=== API 供应商 ===\n" +
-                                "§e内置: Agnes | DeepSeek | StepFun\n" +
+                                "§e内置: Kilo Free (Beam → Auto → Flint)\n" +
                                 "§7切换: /ai api <名称>  选模型: /ai model <名称>\n" +
                                 "\n" +
                                 "§b=== 添加自定义 API ===\n" +

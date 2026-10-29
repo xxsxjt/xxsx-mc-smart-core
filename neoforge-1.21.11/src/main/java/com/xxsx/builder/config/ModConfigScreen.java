@@ -84,7 +84,7 @@ public class ModConfigScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.literal("§b获取模型列表"), b -> fetchModels())
                 .bounds(fieldX(), getFetchY(), 96, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("§a使用 Agnes 内置模型"), b -> useBuiltinModel())
+        addRenderableWidget(Button.builder(Component.literal("§a使用内置免费模型"), b -> useBuiltinModel())
                 .bounds(fieldX() + 102, getFetchY(), 90, 18).build());
 
         modelBox = new EditBox(font, fieldX(), getModelY(), fieldW() - 22, FIELD_H, Component.literal("model"));
@@ -106,7 +106,7 @@ public class ModConfigScreen extends Screen {
                 .bounds(fieldX(), getActionY(), 84, 18).build());
         addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
                 .bounds(fieldX() + 92, getActionY(), 50, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Agnes官网"), b -> openExternalUrl("https://platform.agnes-ai.com/", "Agnes官网"))
+        addRenderableWidget(Button.builder(Component.literal("免费模型说明"), b -> openExternalUrl("https://kilo.ai", "免费模型说明"))
                 .bounds(getTopLinkX(), 8, 86, 18).build());
         addRenderableWidget(Button.builder(Component.literal("DeepSeek官网"), b -> openExternalUrl("https://platform.deepseek.com/", "DeepSeek官网"))
                 .bounds(getTopLinkX(), 30, 86, 18).build());
@@ -128,11 +128,11 @@ public class ModConfigScreen extends Screen {
 
     private void useBuiltinModel() {
         var config = XxsxBuilder.getInstance().getConfig();
-        config.switchToProvider("Agnes");
+        config.switchToProvider("Free Models");
         urlBox.setValue(config.providerUrl());
         keyBox.setValue(config.providerKey());
         modelBox.setValue(config.getEffectiveModel());
-        statusMsg = "§a已切换到内置 Agnes 模型";
+        statusMsg = "§a已切换到内置 Kilo 免费模型（Beam → Auto → Flint）";
     }
 
     private void openExternalUrl(String url, String label) {
@@ -180,7 +180,7 @@ public class ModConfigScreen extends Screen {
         }
 
         drawCenteredStr(g, "§b§lxxsx 的智能核心", cx, 10, 0xFFFFFF);
-        drawCenteredStr(g, "§b[xxsx的智能核心] §fv1.1.1 已装载 - MC 1.21.11", cx, 22, 0xD8F4FF);
+        drawCenteredStr(g, "§b[xxsx的智能核心] §fv1.1.2 已装载 - MC 1.21.11", cx, 22, 0xD8F4FF);
         drawCenteredStr(g, "§7这是启动配置界面：先设置 API，再用 /ai 与智能核心对话", cx, 34, 0xAAB6C2);
 
         int worldTop = getWorldTop();
@@ -215,7 +215,7 @@ public class ModConfigScreen extends Screen {
         drawStr(g, "§7模型", panelLeft + 4, getModelY() + 2, 0xAAAAAA);
         drawStr(g, "§7上下文", panelLeft + 4, getContextY() + 2, 0xAAAAAA);
         drawStr(g, "§8" + getCtxLabel(), fieldX() + 66, getContextY() + 2, 0x888888);
-        drawCenteredStr(g, "§8Agnes 可免费注册，DeepSeek 需付费开通 API", cx, apiTop + 134, 0x707070);
+        drawCenteredStr(g, "§8内置 Kilo 免费模型无需 Key，依次尝试 Beam → Auto → Flint", cx, apiTop + 134, 0x707070);
         drawCenteredStr(g, "§8保存后会写入 common.toml，重新进游戏仍然生效", cx, apiTop + 144, 0x707070);
 
         if (modelListOpen && !fetchedModels.isEmpty()) {

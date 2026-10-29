@@ -1,5 +1,6 @@
 package com.xxsx.builder.modelimport;
 
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;

@@ -595,41 +595,9 @@ public class CommandExecutor {
     }
 
     /** AI 查询 PMX 模型元数据（顶点/面/包围盒/材质），据此决定构建参数 */
+    /** AI 查询 PMX 模型元数据，由可选的模型导入扩展处理。 */
     private String queryPMX(String filePath) {
-        if (filePath.isEmpty()) return "用法: pmx <文件路径>";
-        // 去引号
-        filePath = filePath.replace("\"", "").replace("\"", "").replace("\"", "").trim();
-        java.nio.file.Path p = java.nio.file.Paths.get(filePath);
-        if (!java.nio.file.Files.exists(p)) return "文件不存在: " + filePath;
-        try {
-            var parser = new com.xxsx.builder.voxel.PMXParser();
-            var model = parser.parse(p);
-            // 计算包围盒
-            float minX=Float.MAX_VALUE,minY=Float.MAX_VALUE,minZ=Float.MAX_VALUE;
-            float maxX=-Float.MAX_VALUE,maxY=-Float.MAX_VALUE,maxZ=-Float.MAX_VALUE;
-            for (var v : model.vertices) {
-                if (v.x<minX) minX=v.x; if (v.y<minY) minY=v.y; if (v.z<minZ) minZ=v.z;
-                if (v.x>maxX) maxX=v.x; if (v.y>maxY) maxY=v.y; if (v.z>maxZ) maxZ=v.z;
-            }
-            float sx=maxX-minX, sy=maxY-minY, sz=maxZ-minZ;
-            float maxDim = Math.max(sx, Math.max(sy, sz));
-            int suggestedScale = (int)(50000.0 / Math.sqrt(model.vertices.size()));
-            suggestedScale = Math.max(30, Math.min(400, suggestedScale));
-
-            return String.format(
-                "PMX模型: %s\n  顶点: %d  面三角形: %d  材质: %d  纹理: %d\n" +
-                "  包围盒: %.2f x %.2f x %.2f (最大维: %.2f)\n" +
-                "  建议比例: %d (范围 30-400, 越大越精细)\n" +
-                "  估算方块: 约 %d 块 (比例=%d时)",
-                p.getFileName(), model.vertices.size(), model.faces.size(),
-                model.materials.size(), 0,
-                sx, sy, sz, maxDim,
-                suggestedScale,
-                (int)(sx*suggestedScale/maxDim * sy*suggestedScale/maxDim * sz*suggestedScale/maxDim * 0.3),
-                suggestedScale);
-        } catch (Exception e) {
-            return "PMX 解析失败: " + e.getMessage();
-        }
+        return com.xxsx.builder.api.modelimport.ModelImportBridge.queryPMX(filePath);
     }
 
     private String queryRecipes(String itemId) {

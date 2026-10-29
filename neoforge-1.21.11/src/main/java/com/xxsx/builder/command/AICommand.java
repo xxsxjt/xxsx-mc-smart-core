@@ -8,11 +8,11 @@ import com.xxsx.builder.XxsxBuilder;
 import com.xxsx.builder.ai.ChatSession;
 import com.xxsx.builder.ai.CommandExecutor;
 import com.xxsx.builder.ai.SessionManager;
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import com.xxsx.builder.config.ChatFold;
 import com.xxsx.builder.config.KnowledgeBase;
 import com.xxsx.builder.config.ModLogger;
 import com.xxsx.builder.config.PlayerConfig;
-import com.xxsx.builder.voxel.VoxelBuildManager;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -81,7 +81,7 @@ public class AICommand {
                         .executes(ctx -> {
                             ctx.getSource().sendSuccess(() -> Component.literal(
                                 "§b=== API 供应商 ===\n" +
-                                "§e内置: Agnes | DeepSeek | StepFun\n" +
+                                "§e内置: Kilo Free (Beam → Auto → Flint)\n" +
                                 "§7切换: /ai api <名称>  选模型: /ai model <名称>\n" +
                                 "\n" +
                                 "§b=== 添加自定义 API ===\n" +
@@ -319,65 +319,15 @@ public class AICommand {
     }
 
     private static int handleBuildSpeed(CommandSourceStack src, String n) {
-        try {
-            int spd = Integer.parseInt(n);
-            // 存到配置文件 + 文件持久化
-            XxsxBuilder.getInstance().getConfig().buildSpeed = spd;
-            saveBuildSpeed(spd);
-            var vm = XxsxBuilder.getInstance().getBuildManager();
-            String name = src.getTextName();
-            if (vm != null && vm.setSpeed(name, spd)) {
-                src.sendSuccess(() -> Component.literal("§e速度: " + spd + "/tick (" + (spd*20) + "/秒) [已保存]"), false);
-            } else {
-                src.sendSuccess(() -> Component.literal("§e速度已保存: " + spd + "/tick (建造开始时生效)"), false);
-            }
-        } catch (NumberFormatException e) {
-            src.sendFailure(Component.literal("§c格式: /ai build speed <数字>"));
-        }
-        return 1;
-    }
-
-    private static void saveBuildSpeed(int spd) {
-        try {
-            var p = java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt");
-            java.nio.file.Files.createDirectories(p.getParent());
-            java.nio.file.Files.writeString(p, String.valueOf(spd));
-        } catch (Exception e) {
-            XxsxBuilder.LOGGER.warn("[Build] 保存速度失败: {}", e.getMessage());
-        }
-    }
-
-    public static int loadBuildSpeed() {
-        try {
-            var p = java.nio.file.Paths.get("config", "xxsx_builder", "build_speed.txt");
-            if (java.nio.file.Files.exists(p))
-                return Integer.parseInt(java.nio.file.Files.readString(p).trim());
-        } catch (Exception ignored) {}
-        return -1;
+        return ModelImportBridge.handleBuildSpeed(src, n);
     }
 
     private static int handleBuildConfirm(CommandSourceStack src, boolean yes) {
-        var vm = XxsxBuilder.getInstance().getBuildManager();
-        if (vm == null) return 1;
-        if (yes) {
-            if (vm.confirmClear(src.getTextName()))
-                src.sendSuccess(() -> Component.literal("§a已确认，正在清除..."), false);
-            else src.sendFailure(Component.literal("§c没有待确认的建造"));
-        } else {
-            if (vm.cancelClear(src.getTextName()))
-                src.sendSuccess(() -> Component.literal("§7已跳过清除"), false);
-            else src.sendFailure(Component.literal("§c没有待确认的建造"));
-        }
-        return 1;
+        return ModelImportBridge.handleBuildConfirm(src, yes);
     }
 
     private static int handleBuildStop(CommandSourceStack src) {
-        var vm = XxsxBuilder.getInstance().getBuildManager();
-        if (vm != null && vm.cancelBuild(src.getTextName()))
-            src.sendSuccess(() -> Component.literal("§a建造已停止"), false);
-        else
-            src.sendFailure(Component.literal("§c没有活跃的建造"));
-        return 1;
+        return ModelImportBridge.handleBuildStop(src);
     }
 
     private static int handleFlySpeed(CommandSourceStack src, String speedStr) {
@@ -403,67 +353,9 @@ public class AICommand {
         return 1;
     }
 
-    /** /ai build 两步交互：先展示1倍坐标，再等用户输入倍数 */
+    /** /ai build 两步交互：解析由可选的模型导入扩展处理。 */
     private static int handleBuildCommand(String args, CommandSourceStack src, String playerName) {
-        // 去引号
-        String path = args.trim();
-        if (path.startsWith("\"") && path.indexOf("\"", 1) > 0) {
-            path = path.substring(1, path.indexOf("\"", 1));
-        }
-        if (path.isEmpty()) { src.sendFailure(Component.literal("§c请指定 PMX 路径")); return 1; }
-
-        try {
-            java.nio.file.Path p = java.nio.file.Paths.get(path);
-            if (!java.nio.file.Files.exists(p)) {
-                src.sendFailure(Component.literal("§c文件不存在: " + path)); return 1;
-            }
-
-            com.xxsx.builder.voxel.PMXModel model;
-            if (path.toLowerCase().endsWith(".obj")) {
-                var o = new com.xxsx.builder.voxel.OBJParser().parse(p);
-                model = new com.xxsx.builder.voxel.PMXModel();
-                model.vertices.addAll(o.vertices); model.normals.addAll(o.normals);
-                model.uvs.addAll(o.uvs); model.faces.addAll(o.faces);
-                model.faceMaterials.addAll(o.faceMaterials); model.materials.addAll(o.materials);
-            } else {
-                model = new com.xxsx.builder.voxel.PMXParser().parse(p);
-            }
-            if (model.textureBaseDir == null && p.getParent() != null)
-                model.textureBaseDir = p.getParent().toString();
-            float minX=999,minY=999,minZ=999,maxX=-999,maxY=-999,maxZ=-999;
-            for (var v : model.vertices) {
-                if(v.x<minX)minX=v.x; if(v.y<minY)minY=v.y; if(v.z<minZ)minZ=v.z;
-                if(v.x>maxX)maxX=v.x; if(v.y>maxY)maxY=v.y; if(v.z>maxZ)maxZ=v.z;
-            }
-            float sx=maxX-minX, sy=maxY-minY, sz=maxZ-minZ;
-
-            int suggested = (int)(50000.0 / Math.sqrt(model.vertices.size()));
-            suggested = Math.max(30, Math.min(400, suggested));
-            // 1倍 = suggested 比例下的方块尺寸
-            float maxDim = Math.max(sx, Math.max(sy, sz));
-            int w1 = Math.max(1, Math.round(sx * suggested / maxDim));
-            int h1 = Math.max(1, Math.round(sy * suggested / maxDim));
-            int d1 = Math.max(1, Math.round(sz * suggested / maxDim));
-
-            src.sendSuccess(() -> Component.literal(
-                "§e" + p.getFileName() + " | 顶点" + model.vertices.size()
-                + " 面" + model.faces.size() + " 材质" + model.materials.size()), false);
-            src.sendSuccess(() -> Component.literal(
-                "§71x大小: " + w1 + "x" + h1 + "x" + d1 + " 方块"
-                + " | 建议倍数1-10 (如3=" + (w1*3) + "x" + (h1*3) + "x" + (d1*3) + ")"), false);
-            src.sendSuccess(() -> Component.literal(
-                "§6输入倍数: /ai 3 (支持小数如 1.5 2.5) | §7调速: /ai build speed <数字>\n" +
-                "§7默认1000/tick, 大模型可设500+防卡顿, 小模型可设5000+加速"), false);
-
-            // 存待确认状态
-            ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName);
-            session.pendingBuildPath = path;
-            session.pendingBuildBaseScale = suggested;
-
-        } catch (Exception e) {
-            src.sendFailure(Component.literal("§cPMX解析失败: " + e.getMessage()));
-        }
-        return 1;
+        return ModelImportBridge.handleBuildCommand(args, src, playerName);
     }
 
     private static String extractPmxPath(String input) {

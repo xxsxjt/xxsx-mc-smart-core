@@ -3,7 +3,7 @@ loaderVersion="[47,)"
 license="AGPL-3.0"
 
 [[mods]]
-modId="xxsx_builder"
+modId="xxsx_mc_smart_core"
 version="${file.jarVersion}"
 displayName="xxsx的智能核心"
 logoFile="logo.png"
@@ -12,14 +12,14 @@ xxsx's MC Smart Core — Minecraft AI 助手模组。自然语言操控游戏，
 '''
 authors="xxsx"
 
-[[dependencies.xxsx_builder]]
+[[dependencies.xxsx_mc_smart_core]]
 modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.xxsx_builder]]
+[[dependencies.xxsx_mc_smart_core]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1]"

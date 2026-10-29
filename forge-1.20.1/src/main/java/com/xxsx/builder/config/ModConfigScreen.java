@@ -74,6 +74,8 @@ public class ModConfigScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.literal("§b获取模型列表"), b -> fetchModels())
                 .bounds(panelLeft + LEFT_W, ay + 48, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("§a使用内置免费模型"), b -> useBuiltinModel())
+                .bounds(panelLeft + LEFT_W + 86, ay + 48, 92, 18).build());
 
         modelBox = new EditBox(font, panelLeft + LEFT_W, ay + 72, panelW - LEFT_W - 22, 16, Component.literal("model"));
         modelBox.setMaxLength(128);
@@ -96,6 +98,15 @@ public class ModConfigScreen extends Screen {
                 .bounds(panelLeft + LEFT_W, ay + 120, 80, 18).build());
         addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
                 .bounds(panelLeft + LEFT_W + 90, ay + 120, 50, 18).build());
+    }
+
+    private void useBuiltinModel() {
+        var config = XxsxBuilder.getInstance().getConfig();
+        config.switchToProvider("Free Models");
+        urlBox.setValue(config.providerUrl());
+        keyBox.setValue(config.providerKey());
+        modelBox.setValue(config.getEffectiveModel());
+        statusMsg = "§a已切换到内置 Kilo 免费模型（Beam → Auto → Flint）";
     }
 
     private void fetchModels() {
@@ -140,7 +151,7 @@ public class ModConfigScreen extends Screen {
 
         // === 标题 ===
         g.drawCenteredString(font, "§b§lxxsx 的智能核心", cx, 12, 0xFFFFFF);
-        g.drawCenteredString(font, "§7v1.0.5  ·  AI 助手  ·  PMX 体素建筑", cx, 26, 0x888888);
+        g.drawCenteredString(font, "§7v1.1.1  ·  AI 助手  ·  PMX 体素建筑", cx, 26, 0x888888);
 
         // === 世界高度区 ===
         int hy = 48;

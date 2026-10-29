@@ -1,4 +1,4 @@
-package com.xxsx.builder.modelimport;
+package com.xxsx.builder.api.modelimport;
 
 import com.xxsx.builder.ai.ChatSession;
 import net.minecraft.commands.CommandSourceStack;

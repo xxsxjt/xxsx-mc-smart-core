@@ -1,5 +1,6 @@
 package com.xxsx.builder.modelimport;
 
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import com.xxsx.builder.XxsxBuilder;
 import com.xxsx.builder.ai.ChatSession;
 import com.xxsx.builder.voxel.OBJModel;
@@ -99,8 +100,8 @@ public final class ModelImportHandler implements ModelImportBridge.Handler {
     @Override
     public int handleBuildCommand(String args, CommandSourceStack source, String playerName) {
         String pathText = args.trim();
-        if (pathText.startsWith(""") && pathText.indexOf(""", 1) > 0) {
-            pathText = pathText.substring(1, pathText.indexOf(""", 1));
+        if (pathText.startsWith("\"") && pathText.indexOf("\"", 1) > 0) {
+            pathText = pathText.substring(1, pathText.indexOf("\"", 1));
         }
         if (pathText.isEmpty()) {
             source.sendFailure(Component.literal("§c请指定 PMX/OBJ 路径"));
@@ -146,7 +147,7 @@ public final class ModelImportHandler implements ModelImportBridge.Handler {
     @Override
     public String queryPMX(String filePath) {
         if (filePath == null || filePath.isBlank()) return "[PMX] 用法: [QUERY]pmx 文件路径[/QUERY]";
-        String clean = filePath.replace(""", "").trim();
+        String clean = filePath.replace("\"", "").trim();
         Path path = Paths.get(clean);
         if (!Files.exists(path)) return "[PMX] 文件不存在: " + clean;
         try {

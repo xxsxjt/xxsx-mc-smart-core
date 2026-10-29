@@ -9,7 +9,7 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = "xxsx_builder", bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = "xxsx_mc_smart_core", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class BuilderConfig implements ChatConfig {
     private static final ForgeConfigSpec.Builder inner = new ForgeConfigSpec.Builder();
 
@@ -107,11 +107,6 @@ public class BuilderConfig implements ChatConfig {
         c.commandBlacklist = COMMAND_BLACKLIST.get();
         if (com.xxsx.builder.XxsxBuilder.getInstance() != null) {
             com.xxsx.builder.XxsxBuilder.getInstance().getConfig().apply(c);
-            // build_speed.txt 优先级高于 TOML（/ai build speed 持久化值）
-            int savedSpeed = com.xxsx.builder.command.AICommand.loadBuildSpeed();
-            if (savedSpeed > 0) {
-                com.xxsx.builder.XxsxBuilder.getInstance().getConfig().buildSpeed = savedSpeed;
-            }
         }
     }
 
@@ -186,7 +181,7 @@ public class BuilderConfig implements ChatConfig {
 
     public void saveToFile() {
         try {
-            var path = java.nio.file.Paths.get("config", "xxsx_builder-common.toml");
+            var path = java.nio.file.Paths.get("config", "xxsx_mc_smart_core-common.toml");
             java.nio.file.Files.createDirectories(path.getParent());
             java.nio.file.Files.writeString(path, buildTomlContent());
         } catch (Exception e) {

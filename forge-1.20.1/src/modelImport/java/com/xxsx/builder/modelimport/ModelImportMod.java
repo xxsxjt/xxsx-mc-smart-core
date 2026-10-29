@@ -1,5 +1,6 @@
 package com.xxsx.builder.modelimport;
 
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;

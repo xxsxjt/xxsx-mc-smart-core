@@ -2,7 +2,7 @@
 
 Scope: MC 26.2 / NeoForge 26.2.0.7-beta only.
 
-Mod version: `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar`.
+Mod version: `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar`.
 
 This round adds lightweight, optional integration knowledge, runtime detection, and a small built-in command library for simple executable integrations found in:
 

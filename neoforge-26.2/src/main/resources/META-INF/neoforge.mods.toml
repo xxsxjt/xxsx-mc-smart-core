@@ -4,7 +4,7 @@ license="AGPL-3.0"
 
 [[mods]]
 modId="xxsx_mc_smart_core"
-version="1.1.11"
+version="1.1.12"
 displayName="Xxsx Smart Core"
 logoFile="logo.png"
 description='''

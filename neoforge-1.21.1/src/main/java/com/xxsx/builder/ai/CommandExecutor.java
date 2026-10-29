@@ -333,7 +333,7 @@ public class CommandExecutor {
 
     /** AI 查询 PMX 模型元数据（顶点/面/包围盒/材质），据此决定构建参数 */
     private String queryPMX(String filePath) {
-        return com.xxsx.builder.modelimport.ModelImportBridge.queryPMX(filePath);
+        return com.xxsx.builder.api.modelimport.ModelImportBridge.queryPMX(filePath);
     }
 
     private String queryRecipes(String itemId) {

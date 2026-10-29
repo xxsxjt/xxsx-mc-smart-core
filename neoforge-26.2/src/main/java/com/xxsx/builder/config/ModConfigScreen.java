@@ -123,7 +123,7 @@ public class ModConfigScreen extends Screen {
                 .bounds(actionX + ACTION_SAVE_W + ACTION_GAP + ACTION_CANCEL_W + ACTION_GAP,
                         getActionY(), ACTION_DISMISS_W, 18).build());
         addRenderableWidget(Button.builder(SmartCoreText.gui("button.agnes_site"),
-                b -> openExternalUrl("https://platform.agnes-ai.com/", SmartCoreText.gui("button.agnes_site")))
+                b -> openExternalUrl("https://kilo.ai", SmartCoreText.gui("button.agnes_site")))
                 .bounds(getTopLinkX(), 8, 86, 18).build());
         addRenderableWidget(Button.builder(SmartCoreText.gui("button.deepseek_site"),
                 b -> openExternalUrl("https://platform.deepseek.com/", SmartCoreText.gui("button.deepseek_site")))
@@ -162,7 +162,7 @@ public class ModConfigScreen extends Screen {
 
     private void useBuiltinModel() {
         var config = XxsxBuilder.getInstance().getConfig();
-        config.switchToProvider("Agnes");
+        config.switchToProvider("Free Models");
         urlBox.setValue(config.providerUrl());
         keyBox.setValue(config.providerKey());
         modelBox.setValue(config.getEffectiveModel());

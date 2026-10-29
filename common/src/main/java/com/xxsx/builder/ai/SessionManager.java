@@ -39,7 +39,7 @@ public class SessionManager {
         if (!url.isEmpty() && !key.isEmpty()) {
             return new ExternalProvider(url, key, model, systemPrompt, config.apiTimeoutMs());
         }
-        return new BuiltinProvider(systemPrompt, config.apiTimeoutMs());
+        return new BuiltinProvider(systemPrompt, config.apiTimeoutMs(), model);
     }
 
     /** 初始化或重建默认供应商 */
@@ -68,7 +68,8 @@ public class SessionManager {
 
     /** 根据 URL 判断供应商名称 */
     public static String guessProviderName(String url) {
-        if (url.isEmpty()) return "Agnes (内置)";
+        if (url.isEmpty()) return "Free Models (内置)";
+        if (url.contains("kilo.ai")) return "Free Models";
         if (url.contains("deepseek")) return "DeepSeek";
         if (url.contains("agnes")) return "Agnes";
         if (url.contains("stepfun")) return "StepFun";
@@ -79,8 +80,8 @@ public class SessionManager {
     public static final Map<String, String[]> PROVIDERS = new LinkedHashMap<>();
     public static final Map<String, List<String>> PROVIDER_MODELS = new LinkedHashMap<>();
     static {
-        PROVIDERS.put("Agnes", new String[]{"", ""});
-        PROVIDER_MODELS.put("Agnes", List.of("agnes-2.0-flash"));
+        PROVIDERS.put("Free Models", new String[]{"", ""});
+        PROVIDER_MODELS.put("Free Models", BuiltinProvider.MODELS);
         PROVIDERS.put("Custom", new String[]{"", ""});
         PROVIDER_MODELS.put("Custom", List.of("(手动输入)"));
     }

@@ -6,11 +6,12 @@ It is a client helper for a local client or a singleplayer integrated server. In
 
 ## Current File
 
-The current upload is **v1.1.11** for **Minecraft 26.2 / NeoForge 26.2.0.7-beta** only:
+The current candidate is **v1.1.12** for **Minecraft 26.2 / NeoForge 26.2.0.7-beta** only:
 
-- File: `xxsx-mc-smart-core-neoforge-26.2-1.1.11.jar`
+- Smart Core (`xxsx_mc_smart_core`): `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar` — standalone core.
+- Optional Model Import (`xxsx_builder`): `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar` — install alongside Smart Core v1.1.12 to use PMX/OBJ voxel building.
 - Environment: Client
-- Release stage: Beta
+- Release stage: candidate; publication and client startup validation are pending.
 
 This file does **not** update the older Forge 1.20.1 or NeoForge 1.21.11 lines. Install only a file that explicitly matches both your Minecraft version and loader. NeoForge 1.21.1 and Forge 26.x are local experiments and are not published releases.
 
@@ -27,7 +28,7 @@ This file does **not** update the older Forge 1.20.1 or NeoForge 1.21.11 lines. 
 
 ## Quick Start
 
-1. Put the matching jar in the Minecraft `mods` folder.
+1. Put the Smart Core jar in the Minecraft `mods` folder. To use PMX/OBJ voxel building, also add the matching Model Import jar.
 2. Start Minecraft and enter a local world or singleplayer integrated server.
 3. Use `/ai <message>` to ask for help.
 4. Configure a personal provider with `/ai addmodel <url> <key> <model> [context length]` when needed.

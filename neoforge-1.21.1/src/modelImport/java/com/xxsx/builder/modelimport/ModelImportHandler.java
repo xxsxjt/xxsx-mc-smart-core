@@ -1,5 +1,6 @@
 package com.xxsx.builder.modelimport;
 
+import com.xxsx.builder.api.modelimport.ModelImportBridge;
 import com.xxsx.builder.XxsxBuilder;
 import com.xxsx.builder.ai.ChatSession;
 import com.xxsx.builder.voxel.OBJModel;
@@ -30,7 +31,7 @@ public final class ModelImportHandler implements ModelImportBridge.Handler {
     public int handleBuildConfirm(CommandSourceStack source, boolean confirm) { boolean ok = confirm ? buildManager.confirmClear(source.getTextName()) : buildManager.cancelClear(source.getTextName()); if (ok) source.sendSuccess(() -> Component.literal(confirm ? "§a已确认，正在清除..." : "§7已跳过清除"), false); else source.sendFailure(Component.literal("§c没有待确认的建造")); return 1; }
     public int handleBuildStop(CommandSourceStack source) { if (buildManager.cancelBuild(source.getTextName())) source.sendSuccess(() -> Component.literal("§a建造已停止"), false); else source.sendFailure(Component.literal("§c没有活跃的建造")); return 1; }
     public int handleBuildCommand(String args, CommandSourceStack source, String playerName) {
-        String text = args.trim(); if (text.startsWith(""") && text.indexOf(""", 1) > 0) text = text.substring(1, text.indexOf(""", 1));
+        String text = args.trim(); if (text.startsWith("\"") && text.indexOf("\"", 1) > 0) text = text.substring(1, text.indexOf("\"", 1));
         if (text.isEmpty()) { source.sendFailure(Component.literal("§c请指定 PMX/OBJ 路径")); return 1; }
         try { Path path = Paths.get(text); if (!Files.exists(path)) { source.sendFailure(Component.literal("§c文件不存在: " + text)); return 1; }
             PMXModel model = parseModel(path); if (model.textureBaseDir == null && path.getParent() != null) model.textureBaseDir = path.getParent().toString();
@@ -41,7 +42,7 @@ public final class ModelImportHandler implements ModelImportBridge.Handler {
             ChatSession session = XxsxBuilder.getInstance().getSessionManager().getSession(playerName); session.pendingBuildPath = text; session.pendingBuildBaseScale = suggested;
         } catch (Exception e) { source.sendFailure(Component.literal("§cPMX/OBJ解析失败: " + e.getMessage())); } return 1;
     }
-    public String queryPMX(String filePath) { if (filePath == null || filePath.isBlank()) return "[PMX] 用法: [QUERY]pmx 文件路径[/QUERY]"; String clean = filePath.replace(""", "").trim(); Path path = Paths.get(clean); if (!Files.exists(path)) return "[PMX] 文件不存在: " + clean; try { PMXModel model = parseModel(path); float[] size = bounds(model); int suggested = suggestedScale(model.vertices.size()); return String.format("[PMX模型信息] 文件=%s, 顶点=%d, 面=%d, 材质=%d, 尺寸=%.2fx%.2fx%.2f, 建议基础比例=%d", path.getFileName(), model.vertices.size(), model.faces.size(), model.materials.size(), size[0], size[1], size[2], suggested); } catch (Exception e) { return "[PMX] 解析失败: " + e.getMessage(); } }
+    public String queryPMX(String filePath) { if (filePath == null || filePath.isBlank()) return "[PMX] 用法: [QUERY]pmx 文件路径[/QUERY]"; String clean = filePath.replace("\"", "").trim(); Path path = Paths.get(clean); if (!Files.exists(path)) return "[PMX] 文件不存在: " + clean; try { PMXModel model = parseModel(path); float[] size = bounds(model); int suggested = suggestedScale(model.vertices.size()); return String.format("[PMX模型信息] 文件=%s, 顶点=%d, 面=%d, 材质=%d, 尺寸=%.2fx%.2fx%.2f, 建议基础比例=%d", path.getFileName(), model.vertices.size(), model.faces.size(), model.materials.size(), size[0], size[1], size[2], suggested); } catch (Exception e) { return "[PMX] 解析失败: " + e.getMessage(); } }
     public boolean cancelBuild(String playerName) { return buildManager.cancelBuild(playerName); }
     public boolean hasActiveJob(String playerName) { return buildManager.hasActiveJob(playerName); }
     private static PMXModel parseModel(Path path) throws Exception { if (path.toString().toLowerCase().endsWith(".obj")) { OBJModel obj = new OBJParser().parse(path); PMXModel model = new PMXModel(); model.vertices.addAll(obj.vertices); model.normals.addAll(obj.normals); model.uvs.addAll(obj.uvs); model.faces.addAll(obj.faces); model.faceMaterials.addAll(obj.faceMaterials); model.materials.addAll(obj.materials); return model; } return new PMXParser().parse(path); }

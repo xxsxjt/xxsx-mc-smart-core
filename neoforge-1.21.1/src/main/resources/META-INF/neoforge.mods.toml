@@ -3,8 +3,8 @@ loaderVersion="[4,)"
 license="AGPL-3.0"
 
 [[mods]]
-modId="xxsx_builder"
-version="1.1.0"
+modId="xxsx_mc_smart_core"
+version="1.1.1"
 displayName="xxsx Client Builder Assistant"
 logoFile="logo.png"
 description='''
@@ -14,14 +14,14 @@ Dedicated server installation has no effect.
 '''
 authors="xxsx"
 
-[[dependencies.xxsx_builder]]
+[[dependencies.xxsx_mc_smart_core]]
 modId="neoforge"
 type="required"
 versionRange="[21.1,)"
 ordering="NONE"
 side="CLIENT"
 
-[[dependencies.xxsx_builder]]
+[[dependencies.xxsx_mc_smart_core]]
 modId="minecraft"
 type="required"
 versionRange="[1.21.1,1.22)"

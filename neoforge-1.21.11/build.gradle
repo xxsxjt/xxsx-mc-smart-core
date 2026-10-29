@@ -3,11 +3,29 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.141'
 }
 
-version = '1.1.1'
+version = '1.1.2'
 group = 'com.xxsx.builder'
 base.archivesName = 'xxsx-builder-neoforge-1.21.11'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+sourceSets.main.java.srcDirs = ['src/main/java', '../common/src/main/java']
+sourceSets.main.java.exclude 'com/xxsx/builder/voxel/**'
+
+sourceSets {
+    modelImport {
+        java.srcDirs = ['src/modelImport/java', 'src/main/java', '../common/src/main/java']
+        java.include 'com/xxsx/builder/modelimport/ModelImportHandler.java'
+        java.include 'com/xxsx/builder/modelimport/ModelImportMod.java'
+        java.include 'com/xxsx/builder/voxel/**'
+        resources.srcDirs = ['src/modelImport/resources']
+    }
+}
+
+sourceSets.modelImport.compileClasspath += sourceSets.main.output
+sourceSets.modelImport.runtimeClasspath += sourceSets.main.output
+sourceSets.modelImport.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.modelImport.runtimeClasspath += sourceSets.main.runtimeClasspath
 
 neoForge {
     version = "21.11.42"
@@ -28,24 +46,6 @@ neoForge {
         }
     }
 }
-
-sourceSets.main.java.srcDirs = ['src/main/java', '../common/src/main/java']
-sourceSets.main.java.exclude 'com/xxsx/builder/voxel/**'
-
-sourceSets {
-    modelImport {
-        java.srcDirs = ['src/modelImport/java', 'src/main/java', '../common/src/main/java']
-        java.include 'com/xxsx/builder/modelimport/ModelImportHandler.java'
-        java.include 'com/xxsx/builder/modelimport/ModelImportMod.java'
-        java.include 'com/xxsx/builder/voxel/**'
-        resources.srcDirs = ['src/modelImport/resources']
-    }
-}
-
-sourceSets.modelImport.compileClasspath += sourceSets.main.output
-sourceSets.modelImport.runtimeClasspath += sourceSets.main.output
-sourceSets.modelImport.compileClasspath += sourceSets.main.compileClasspath
-sourceSets.modelImport.runtimeClasspath += sourceSets.main.runtimeClasspath
 
 dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
