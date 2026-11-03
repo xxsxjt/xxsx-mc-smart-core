@@ -2,7 +2,7 @@
 
 xxsx 的智能核心 — Minecraft 多版本客户端智能辅助模组。
 
-当前 26.2 候选版本 `1.1.12` 面向 MC 26.2 / NeoForge 26.2.0.7-beta，包含 Smart Core 和可选的模型导入扩展两个独立 jar；模型导入功能需要 Smart Core `1.1.12` 或更新版本。源码修复已包含 JPMS split-package 修复，构建与客户端启动验证状态见本次验收记录。Forge 1.20.1（v1.1.1）、NeoForge 1.21.1（v1.1.1）和 NeoForge 1.21.11（v1.1.2）已同步到相同的双 jar 结构并全部构建通过。
+当前 26.x 候选版本包含面向 MC 26.1.2 / NeoForge 26.1.2.124 的 `1.1.13` 以及面向 MC 26.2 / NeoForge 26.2.0.7-beta 的 `1.1.12`，均包含 Smart Core 和可选的模型导入扩展两个独立 jar；模型导入功能需要对应同版本的 Smart Core。源码修复已包含 JPMS split-package 修复，构建与客户端启动验证状态见本次验收记录。Forge 1.20.1（v1.1.1）、NeoForge 1.21.1（v1.1.1）和 NeoForge 1.21.11（v1.1.2）已同步到相同的双 jar 结构并全部构建通过。
 
 全部模块的默认 AI 通道统一为内置 Kilo 免费模型（`Beam → Auto → Flint` 依次回退），无需 API Key，按 IP 限速；也可在配置界面填写自己的 OpenAI 兼容 API。
 
@@ -86,9 +86,10 @@ protected_items = ""         # 额外保护的物品 ID，逗号分隔
 | MC 1.20.1 | Forge 47.2.0+ | v1.1.1 | 已迁移双 jar 结构并切换内置免费模型 |
 | MC 1.21.1 | NeoForge 21.1.138 | v1.1.1 | 已迁移双 jar 结构并切换内置免费模型 |
 | MC 1.21.11 | NeoForge 21.11.42 | v1.1.2 | 已迁移双 jar 结构并切换内置免费模型 |
+| MC 26.1.2 | NeoForge 26.1.2.124 | v1.1.13 | Smart Core；可选模型导入扩展需同版本配套安装 |
 | MC 26.2 | NeoForge 26.2.0.7-beta | v1.1.12 | Smart Core；可选模型导入扩展需同版本配套安装 |
 
-全部四个模块共用 `common/` 源码，默认 AI 通道统一为 Kilo 免费模型链（Beam → Auto → Flint），无需 API Key。
+全部五个模块共用 `common/` 源码，默认 AI 通道统一为 Kilo 免费模型链（Beam → Auto → Flint），无需 API Key。
 
 ## 技术栈
 
@@ -105,13 +106,14 @@ protected_items = ""         # 额外保护的物品 ID，逗号分隔
 
 任何修改和衍生作品必须同样以 AGPL-3.0 开源，包括通过网络提供服务的场景。
 
-## 当前状态 (2026-10-28)
+## 当前状态 (2026-10-29)
 
-四个模块本轮全部构建通过。默认 AI 通道统一为内置 Kilo 免费模型（`Beam → Auto → Flint` 依次回退，无需 Key，按 IP 限速），配置界面与登录提示同步更新；`Agnes` 相关硬编码与链接已移除。
+五个模块本轮全部构建通过。默认 AI 通道统一为内置 Kilo 免费模型（`Beam → Auto → Flint` 依次回退，无需 Key，按 IP 限速），配置界面与登录提示同步更新；`Agnes` 相关硬编码与链接已移除。
 
-v1.1.12-26.2 — MC 26.2 NeoForge 客户端辅助更新。Smart Core jar 为 `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar`；可选模型导入 jar 为 `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar`，依赖 Smart Core `>=1.1.12`。两包的 Java 包集合经构建后验证无交集。模型仍优先使用 `[QUERY]registry <类型> <命名空间/关键词>` 或对应快捷写法扫描当前运行时注册 ID。
+- **v1.1.13-26.1.2** — 新增 MC 26.1.2 / NeoForge 26.1.2.124 适配模块（`neoforge-26.1.2/`），适配 26.1.2 的 `Minecraft.screen` 字段与 `Minecraft.setScreen(...)` API。Smart Core jar 为 `xxsx-mc-smart-core-neoforge-26.1.2-1.1.13.jar`；可选模型导入 jar 为 `xxsx-mc-model-import-neoforge-26.1.2-1.1.13.jar`，依赖 Smart Core `>=1.1.13`。
+- **v1.1.12-26.2** — MC 26.2 NeoForge 客户端辅助更新。Smart Core jar 为 `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar`；可选模型导入 jar 为 `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar`，依赖 Smart Core `>=1.1.12`。两包的 Java 包集合经构建后验证无交集。模型仍优先使用 `[QUERY]registry <类型> <命名空间/关键词>` 或对应快捷写法扫描当前运行时注册 ID。
 
-本轮同时把 `forge-1.20.1`、`neoforge-1.21.1`、`neoforge-1.21.11` 补齐到与 26.2 相同的双 jar 结构（桥接 API 在 `com.xxsx.builder.api.modelimport`），修复了自 `a6d4bea` 起三个模块无法编译的问题。
+本轮同时把 `forge-1.20.1`、`neoforge-1.21.1`、`neoforge-1.21.11` 补齐到与 26.x 相同的双 jar 结构（桥接 API 在 `com.xxsx.builder.api.modelimport`），修复了自 `a6d4bea` 起三个模块无法编译的问题。
 
 ### 支持版本 / 发布矩阵
 
@@ -120,6 +122,7 @@ v1.1.12-26.2 — MC 26.2 NeoForge 客户端辅助更新。Smart Core jar 为 `xx
 | `forge-1.20.1/` | Forge 47.2.0+ | MC 1.20.1 | v1.1.1 | 已构建 | `xxsx-mc-smart-core-forge-1.20.1-1.1.1.jar` + `xxsx-mc-model-import-forge-1.20.1-1.1.1.jar` |
 | `neoforge-1.21.1/` | NeoForge 21.1.138 | MC 1.21.1 | v1.1.1 | 已构建 | `xxsx-mc-smart-core-neoforge-1.21.1-1.1.1.jar` + `xxsx-mc-model-import-neoforge-1.21.1-1.1.1.jar` |
 | `neoforge-1.21.11/` | NeoForge 21.11.42 | MC 1.21.11 API 族 | v1.1.2 | 已构建 | `xxsx-mc-smart-core-neoforge-1.21.11-1.1.2.jar` + `xxsx-mc-model-import-neoforge-1.21.11-1.1.2.jar` |
+| `neoforge-26.1.2/` | NeoForge 26.1.2.124 | MC 26.1.2 | v1.1.13 | Smart Core `xxsx_mc_smart_core` + 可选模型导入扩展 `xxsx_builder` | `xxsx-mc-smart-core-neoforge-26.1.2-1.1.13.jar` + `xxsx-mc-model-import-neoforge-26.1.2-1.1.13.jar` |
 | `neoforge-26.2/` | NeoForge 26.2.0.7-beta | MC 26.2 | v1.1.12 | Smart Core `xxsx_mc_smart_core` + 可选模型导入扩展 `xxsx_builder` | `xxsx-mc-smart-core-neoforge-26.2-1.1.12.jar` + `xxsx-mc-model-import-neoforge-26.2-1.1.12.jar` |
 
 已知限制：三个旧版本模块尚未执行客户端启动 smoke test。`forge-1.20.1`、`neoforge-1.21.1`、`neoforge-1.21.11` 的核心 jar 此前 `mods.toml` 声明 `xxsx_builder` 而 `@Mod` 使用 `xxsx_mc_smart_core`，两者不一致会导致加载器找不到 mod 主类；本轮已统一为 `xxsx_mc_smart_core`，并为 model-import jar 补齐 `mods.toml`/`neoforge.mods.toml`（此前该 jar 只有 `MANIFEST.MF`，无法被识别为独立 mod）。
@@ -130,7 +133,9 @@ v1.1.12-26.2 — MC 26.2 NeoForge 客户端辅助更新。Smart Core jar 为 `xx
 xxsx-mc-smart-core/
 ├── common/                # 共享 Java 逻辑
 ├── forge-1.20.1/          # Forge 1.20.1 独立子工程
+├── neoforge-1.21.1/       # NeoForge 1.21.1 独立子工程
 ├── neoforge-1.21.11/      # NeoForge 1.21.11 独立子工程
+├── neoforge-26.1.2/       # NeoForge 26.1.2 独立子工程
 ├── neoforge-26.2/         # NeoForge 26.2 独立子工程
 ├── release-assets/        # GitHub Release 用的已验证 jar
 └── .github/workflows/     # GitHub Actions 发布流水线

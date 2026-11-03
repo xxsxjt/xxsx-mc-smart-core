@@ -1,5 +1,11 @@
 # 更新日志
 
+## v1.1.13 (2026-10-29, MC 26.1.2 NeoForge)
+
+- 新增 `neoforge-26.1.2` 模块，面向 Minecraft 26.1.2 / NeoForge 26.1.2.124（Java 25）。
+- 适配 MC 26.1.2 客户端 GUI API（`Minecraft.screen` 字段与 `Minecraft.setScreen(...)` 方法，区别于 26.2 的 `Minecraft.gui.screen()` 与 `Minecraft.gui.setScreen(...)`）。
+- 保持双 jar 架构：`xxsx-mc-smart-core-neoforge-26.1.2-1.1.13.jar` 与可选扩展 `xxsx-mc-model-import-neoforge-26.1.2-1.1.13.jar`（依赖 Smart Core `[1.1.13,)`），默认 AI 通道为 Kilo AI 网关免费层（`Beam → Auto → Flint`）。
+
 ## v1.1.2 (2026-10-28, MC 1.21.11 NeoForge)
 
 - 内置默认 provider 改用 Kilo AI 网关的免密钥免费层（`https://api.kilo.ai/api/gateway`），模型链 `reflection/beam-free` → `kilo-auto/free` → `recursive/flint-v1.0:free` 依次回退。
